@@ -60,6 +60,20 @@ def test_health(client: TestClient) -> None:
     assert response.json()["status"] == "ok"
 
 
+def test_root_returns_html_landing_page(client: TestClient) -> None:
+    """Bare root must return a friendly HTML page, not FastAPI's JSON 404."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    body = response.text
+    assert "AI" in body and "Arena" in body
+    # Links to the documented endpoints should be present so a curious
+    # visitor can navigate without reading code.
+    assert "/health" in body
+    assert "/leaderboard/hallucination_hunter" in body
+    assert "/docs" in body
+
+
 def test_perfect_hallucination_submission_scores_one_and_lands_on_leaderboard(
     client: TestClient,
 ) -> None:
