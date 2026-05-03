@@ -29,18 +29,22 @@ from api.schemas import (
     TRACK_RAG,
     TrackId,
 )
+from evaluator.judge import JudgeBackend
 from evaluator.tracks.hallucination import score_hallucination
 from evaluator.tracks.meta_judge import score_meta_judge
+from evaluator.tracks.prompt_golf import score_prompt_golf
 
 log = logging.getLogger(__name__)
 
 
-# The dispatch table: one row per track. Days 3–4 fill in the remaining two.
-TrackScorer = Callable[[Submission, Any], ScoreResult]
+# Every track scorer takes (submission, gold) and a keyword-only `judge`.
+# Tracks that don't need an LLM (Track 1, Track 4) accept and ignore it so
+# the dispatch loop stays uniform.
+TrackScorer = Callable[..., ScoreResult]
 
 TRACK_SCORERS: dict[str, TrackScorer] = {
     TRACK_HALLUCINATION: score_hallucination,
-    # TRACK_PROMPT_GOLF: score_prompt_golf,   # Day 3 (needs judge integration)
+    TRACK_PROMPT_GOLF: score_prompt_golf,
     # TRACK_RAG:         score_rag,           # Day 4 (needs RAGAS + corpus)
     TRACK_META_JUDGE: score_meta_judge,
 }
@@ -56,6 +60,7 @@ class EvaluationDeps:
     gold_provider: Any
     canvas: Any | None = None
     canvas_context_resolver: Callable[[Submission], dict[str, int] | None] | None = None
+    judge: JudgeBackend | None = None
     extras: dict[str, Any] = field(default_factory=dict)
 
 
@@ -77,7 +82,7 @@ def run_evaluation(submission: Submission, deps: EvaluationDeps) -> ScoreResult:
 
     try:
         gold = deps.gold_provider.for_track(submission.track_id)
-        result = scorer(submission, gold)
+        result = scorer(submission, gold, judge=deps.judge)
     except Exception as exc:  # pragma: no cover - defensive
         log.exception("scoring failed for %s", submission.submission_id)
         result = ScoreResult(

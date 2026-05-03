@@ -48,6 +48,8 @@ def _per_class_prf(
 def score_hallucination(
     submission: Submission,
     ground_truth: Mapping[str, str],
+    *,
+    judge: object | None = None,  # not used; uniform dispatch signature
 ) -> ScoreResult:
     """Score a Hallucination Hunter submission against the hidden gold labels.
 
@@ -58,10 +60,13 @@ def score_hallucination(
             in the student's predictions must match this exactly; missing or
             extra claim_ids raise ValueError so the dispatcher can return a
             friendly error to the student.
+        judge: Ignored. Track 1 has no LLM call; the kwarg exists so the
+            runner's dispatch table can pass `judge=` to every scorer.
 
     Returns:
         ScoreResult with final_score = macro-F1.
     """
+    del judge  # explicit no-op
     if submission.track_id != TRACK_HALLUCINATION:
         raise ValueError(
             f"score_hallucination called with track_id={submission.track_id!r}; "

@@ -92,6 +92,8 @@ def cohen_kappa_linear(rater1: Sequence[int], rater2: Sequence[int]) -> float:
 def score_meta_judge(
     submission: Submission,
     ground_truth: Mapping[str, float],
+    *,
+    judge: object | None = None,  # not used; uniform dispatch signature
 ) -> ScoreResult:
     """Score a Build-Your-Own-AI-Judge submission against instructor gold.
 
@@ -99,10 +101,14 @@ def score_meta_judge(
         submission: Validated submission. track_id must be 'meta_judge'.
         ground_truth: Mapping of item_id → instructor's gold rating.
             Ratings are rounded to integers for ordinal kappa.
+        judge: Ignored. Track 4 measures student-vs-instructor agreement
+            with no LLM call; the kwarg keeps the dispatch signature
+            uniform across tracks.
 
     Returns:
         ScoreResult with final_score = (κ + 1) / 2.
     """
+    del judge  # explicit no-op
     if submission.track_id != TRACK_META_JUDGE:
         raise ValueError(
             f"score_meta_judge called with track_id={submission.track_id!r}; "
