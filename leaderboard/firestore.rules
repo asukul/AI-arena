@@ -1,0 +1,33 @@
+// Firestore security rules for AI Arena.
+//
+// Public read on the leaderboard subcollection (so the static leaderboard
+// page doesn't need auth).  Everything else is server-only — the Cloud Run
+// evaluator writes via a service-account token and bypasses these rules.
+//
+// Deploy with:  firebase deploy --only firestore:rules
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Per-track leaderboard entries are world-readable.
+    match /leaderboard/{trackId}/entries/{studentId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // The submissions archive and rate-limit counters are server-only.
+    match /submissions/{submissionId} {
+      allow read, write: if false;
+    }
+    match /rate_limits/{counterId} {
+      allow read, write: if false;
+    }
+
+    // Default deny.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

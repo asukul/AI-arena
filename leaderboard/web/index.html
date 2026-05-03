@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Arena — D4 Summer 2026 Leaderboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>AI Arena</h1>
+    <p class="tagline">Kaggle for Applied AI &mdash; D4 Summer Bootcamp 2026</p>
+  </header>
+
+  <nav id="track-tabs" aria-label="Tracks">
+    <button data-track="hallucination_hunter" class="active">Hallucination Hunter</button>
+    <button data-track="prompt_golf">Prompt Golf</button>
+    <button data-track="rag_treasure_hunt">RAG Treasure Hunt</button>
+    <button data-track="meta_judge">Build Your Own Judge</button>
+  </nav>
+
+  <main>
+    <section id="leaderboard">
+      <div class="meta-row">
+        <h2 id="track-title">Hallucination Hunter</h2>
+        <span id="status">connecting&hellip;</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Student</th>
+            <th>Score</th>
+            <th>Submission</th>
+            <th>Updated</th>
+          </tr>
+        </thead>
+        <tbody id="rows">
+          <tr><td colspan="5" class="empty">No submissions yet for this track.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <aside class="rubric-link">
+      Curious how scores are computed? See
+      <a href="https://github.com/" id="rubric-link">the public rubric doc</a>.
+    </aside>
+  </main>
+
+  <footer>
+    <p>
+      Iowa State University &middot; Department of Computer Science &middot;
+      <a href="mailto:adisak.sukul@gmail.com">Adisak Sukul</a>
+    </p>
+  </footer>
+
+  <script type="module" src="leaderboard.js"></script>
+</body>
+</html>
