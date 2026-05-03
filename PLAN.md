@@ -219,19 +219,19 @@ Every track uses this envelope. The `track_payload` differs per track but the wr
 - [ ] Public rubric doc (`docs/judge_rubrics.md`) with Track 1 scoring explained
 
 ### Day 3 — Track 2 (Prompt Golf) with judge layer
-- [ ] `evaluator/judge.py`: Claude API wrapper, T=0, retries, token logging
-- [ ] First judge prompt: `prompts/judge_correctness.txt`
-- [ ] Track 2 evaluator (`evaluator/tracks/prompt_golf.py`): runs prompt, judges output, divides by token count
-- [ ] Tests for Track 2 with mocked judge responses
-- [ ] Add Track 2 to leaderboard
+- [x] `evaluator/judge.py`: Claude API wrapper, T=0, retries, token logging
+- [x] First judge prompt: `prompts/judge_correctness.txt`
+- [x] Track 2 evaluator (`evaluator/tracks/prompt_golf.py`): runs prompt, judges output, divides by token count
+- [x] Tests for Track 2 with mocked judge responses
+- [x] Add Track 2 to leaderboard
 
 ### Day 4 — Track 3 (RAG) with RAGAS
-- [ ] `pip install ragas` and integrate
-- [ ] Track 3 evaluator (`evaluator/tracks/rag.py`): RAGAS faithfulness, context precision/recall + judge correctness + citation match + cost
-- [ ] Weighted scoring (`evaluator/scoring.py`): 30/25/15/15/10/5
-- [ ] Build `corpora/isu_course_catalog/` chunked corpus with gold citations
-- [ ] Tests for Track 3 with small mock corpus
-- [ ] Cross-family re-grade pass (`evaluator/regrade.py`) for top 10%
+- [x] ~~`pip install ragas` and integrate~~ — Deferred to Phase 2; v1 computes the metrics in-tree (no RAGAS dep). Migration is a drop-in because the wire shape matches.
+- [x] Track 3 evaluator (`evaluator/tracks/rag.py`): faithfulness, retrieval recall + judge correctness + citation F1 + cost + safety
+- [x] Weighted scoring (`evaluator/scoring.py`): 30/25/15/15/10/5
+- [x] Build `corpora/isu_course_catalog/` chunked corpus with gold citations
+- [x] Tests for Track 3 with small mock corpus
+- [x] Cross-family re-grade pass (`evaluator/regrade.py`) for top 10%
 
 ### Day 5 — Firebase-hosted leaderboard
 - [ ] `leaderboard/web/index.html` + `leaderboard.js` — Firestore JS SDK with real-time listener
@@ -250,8 +250,8 @@ Every track uses this envelope. The `track_payload` differs per track but the wr
 - [ ] Recruit 2–3 DS Club students to submit fake entries to each track
 - [ ] Fix whatever they break
 - [ ] Add monitoring dashboard in Cloud Logging
-- [ ] Set GCP budget alert at $200 to catch runaway usage early
-- [ ] Cost guardrail: per-student daily token budget enforced in `judge.py`
+- [x] Set GCP budget alert at $200 to catch runaway usage early (`scripts/budget_alert.ps1`)
+- [x] Cost guardrail: per-student daily token budget enforced in `evaluator/token_budget.py` (`BudgetedJudge` wraps the configured judge per submission; default 50,000 tokens/day; configurable via `DAILY_TOKEN_BUDGET`).
 
 ---
 

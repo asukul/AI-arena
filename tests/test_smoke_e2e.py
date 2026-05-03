@@ -44,6 +44,7 @@ def client() -> TestClient:
         canvas_api_token="",
         canvas_webhook_secret="test-secret",
         rate_limit_per_day=5,
+        daily_token_budget=50_000,
         local_dev=True,
         log_level="WARNING",
     )

@@ -14,6 +14,7 @@ def _client() -> TestClient:
         queue_id="test-queue", evaluator_target_url="", tasks_invoker_sa="",
         canvas_base_url="https://example", canvas_api_token="",
         canvas_webhook_secret="x", rate_limit_per_day=2,
+        daily_token_budget=50_000,
         local_dev=True, log_level="WARNING",
     )
     return TestClient(create_app(settings=settings))

@@ -33,6 +33,7 @@ class Settings:
     canvas_webhook_secret: str
 
     rate_limit_per_day: int
+    daily_token_budget: int
     local_dev: bool
     log_level: str
 
@@ -51,6 +52,7 @@ def get_settings() -> Settings:
         canvas_api_token=os.getenv("CANVAS_API_TOKEN", ""),
         canvas_webhook_secret=os.getenv("CANVAS_WEBHOOK_SECRET", ""),
         rate_limit_per_day=int(os.getenv("RATE_LIMIT_PER_DAY", "5")),
+        daily_token_budget=int(os.getenv("DAILY_TOKEN_BUDGET", "50000")),
         local_dev=os.getenv("ARENA_LOCAL_DEV", "0") == "1",
         log_level=os.getenv("LOG_LEVEL", "INFO"),
     )

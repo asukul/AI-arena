@@ -22,6 +22,7 @@ helpers are already built (api/auth.py, api/canvas.py).
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -40,6 +41,12 @@ from api.rate_limit import (
 from api.schemas import Submission
 from evaluator.gold import GoldProvider
 from evaluator.runner import EvaluationDeps, run_evaluation
+from evaluator.judge import AnthropicJudge, JudgeBackend
+from evaluator.token_budget import (
+    FirestoreTokenBudget,
+    InMemoryTokenBudget,
+    TokenBudgetStore,
+)
 from leaderboard.firestore_client import (
     FirestoreLeaderboard,
     InMemoryLeaderboard,
@@ -174,6 +181,21 @@ def _build_eval_deps(settings: Settings, leaderboard: LeaderboardStore) -> Evalu
             dry_run=settings.local_dev or not settings.canvas_api_token,
         )
 
+    # Judge: lazy AnthropicJudge in production; None in local-dev unless the
+    # ANTHROPIC_API_KEY env var is set (in which case real calls flow). Tests
+    # inject a FakeJudge directly and bypass this path.
+    judge: JudgeBackend | None = None
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        judge = AnthropicJudge()
+
+    # Token budget: per-student daily cap on judge-token spend. Same backend
+    # split as the rate limiter — Firestore in prod, in-memory in dev/tests.
+    token_budget: TokenBudgetStore = (
+        InMemoryTokenBudget(daily_limit=settings.daily_token_budget)
+        if settings.local_dev
+        else FirestoreTokenBudget(settings.project_id, daily_limit=settings.daily_token_budget)
+    )
+
     # Default gold dir is <repo>/corpora/gold; tests override via app.state.
     default_gold_dir = Path(__file__).resolve().parent.parent / "corpora" / "gold"
     return EvaluationDeps(
@@ -181,6 +203,8 @@ def _build_eval_deps(settings: Settings, leaderboard: LeaderboardStore) -> Evalu
         gold_provider=GoldProvider(default_gold_dir),
         canvas=canvas,
         canvas_context_resolver=None,  # wired in Day 2 with the Canvas webhook
+        judge=judge,
+        token_budget=token_budget,
     )
 
 
