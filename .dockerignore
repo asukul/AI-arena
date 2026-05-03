@@ -1,0 +1,22 @@
+.git
+.gitignore
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+tests
+docs
+scripts
+local_data
+.env
+.env.*
+!.env.example
+*.md
+!README.md
+# Keep corpora/ — gold data is needed at runtime.
+!corpora/
