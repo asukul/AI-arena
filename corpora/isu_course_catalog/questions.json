@@ -1,0 +1,25 @@
+{
+  "_about": "Public questions for Track 3. Students answer these against the chunked corpus in index.json. Server-side gold (expected_answer + relevant_chunk_ids + gold_citations) lives in corpora/gold/rag_treasure_hunt.json and never leaves the server.",
+  "questions": [
+    {
+      "question_id": "Q001",
+      "question": "What is CS 2010 about and what are its prerequisites?"
+    },
+    {
+      "question_id": "Q002",
+      "question": "What are the prerequisites for CS 2280 and how many credit hours is it?"
+    },
+    {
+      "question_id": "Q003",
+      "question": "What does DS 2010 cover and what statistics course is required?"
+    },
+    {
+      "question_id": "Q004",
+      "question": "When is AI 2010 offered and what is its prerequisite?"
+    },
+    {
+      "question_id": "Q005",
+      "question": "What is the default late-work policy for CS, DS, and AI courses at ISU?"
+    }
+  ]
+}

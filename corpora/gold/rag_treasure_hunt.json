@@ -1,0 +1,61 @@
+{
+  "_about": "Hidden gold for Track 3. Never returned in API responses. Replace before launch with the rotated bootcamp gold set.",
+  "items": [
+    {
+      "question_id": "Q001",
+      "question": "What is CS 2010 about and what are its prerequisites?",
+      "expected_answer": "CS 2010 is Introduction to Computer Science using Python. It covers computational thinking with no prior programming experience required. Prerequisites: none.",
+      "relevant_chunk_ids": ["cs2010_c1", "cs2010_c2"],
+      "gold_citations": ["cs2010_c1", "cs2010_c2"]
+    },
+    {
+      "question_id": "Q002",
+      "question": "What are the prerequisites for CS 2280 and how many credit hours is it?",
+      "expected_answer": "CS 2280 (Introduction to Data Structures) requires CS 2010 with a grade of C- or better. It is three credit hours.",
+      "relevant_chunk_ids": ["cs2280_c1", "cs2280_c2"],
+      "gold_citations": ["cs2280_c2"]
+    },
+    {
+      "question_id": "Q003",
+      "question": "What does DS 2010 cover and what statistics course is required?",
+      "expected_answer": "DS 2010 covers the data analysis pipeline (collection, cleaning, exploratory analysis with pandas, visualization, and an intro to scikit-learn). Required statistics prerequisite: STAT 1010 or STAT 1040.",
+      "relevant_chunk_ids": ["ds2010_c1", "ds2010_c2"],
+      "gold_citations": ["ds2010_c1", "ds2010_c2"]
+    },
+    {
+      "question_id": "Q004",
+      "question": "When is AI 2010 offered and what is its prerequisite?",
+      "expected_answer": "AI 2010 is offered in the Spring semester only. Prerequisite: CS 2280 (data structures) or DS 2010 (intro to data science).",
+      "relevant_chunk_ids": ["ai2010_c1", "ai2010_c2"],
+      "gold_citations": ["ai2010_c2"]
+    },
+    {
+      "question_id": "Q005",
+      "question": "What is the default late-work policy for CS, DS, and AI courses at ISU?",
+      "expected_answer": "Default late-work policy is a 10% deduction per day late, capped at 50%. Extensions are granted for documented medical or family emergencies on request to the instructor.",
+      "relevant_chunk_ids": ["policy_c2"],
+      "gold_citations": ["policy_c2"]
+    }
+  ],
+  "chunks": {
+    "cs2010_c1": "CS 2010 — Introduction to Computer Science. This course introduces students to computational thinking using Python. No prior programming experience required. Topics include variables, loops, functions, lists, dictionaries, and basic file I/O. Three lecture hours and one lab hour per week.",
+    "cs2010_c2": "CS 2010 prerequisites: none. Recommended for first-year students considering a major or minor in Computer Science, Data Science, or Software Engineering. Counts toward the university LAS-Q quantitative requirement. Letter grade only.",
+    "cs2280_c1": "CS 2280 — Introduction to Data Structures. A second course in computer science covering arrays, linked lists, stacks, queues, hash tables, and binary search trees. Students implement each structure from scratch in Python and analyze its time and space complexity using big-O notation.",
+    "cs2280_c2": "CS 2280 prerequisite: CS 2010 with a grade of C- or better. Three credit hours. Coursework includes weekly programming assignments, two midterm exams, and a final project where students choose and implement an advanced data structure not covered in lecture.",
+    "ds2010_c1": "DS 2010 — Introduction to Data Science. Covers the data analysis pipeline: collecting data, cleaning, exploratory analysis with pandas, basic visualization with matplotlib, and an introduction to supervised learning with scikit-learn. Term project required.",
+    "ds2010_c2": "DS 2010 prerequisites: STAT 1010 or STAT 1040 (basic statistics) and CS 2010 (introductory programming). Open to non-majors. The course emphasizes Jupyter notebook workflows and version control with git.",
+    "ai2010_c1": "AI 2010 — Foundations of Artificial Intelligence. Survey course on classical AI (search, constraint satisfaction, game playing) and modern machine learning (regression, classification, neural networks). Hands-on projects in Python.",
+    "ai2010_c2": "AI 2010 prerequisite: CS 2280 (data structures) or DS 2010 (intro to data science). Cross-listed with DS 2010 for data-science majors. Spring semester only.",
+    "policy_c1": "Iowa State University academic integrity policy: students may collaborate on conceptual understanding but must submit individual work for graded assignments. Use of generative AI tools is permitted only when explicitly authorized in the course syllabus.",
+    "policy_c2": "Late-work policy is set by each course instructor. Default for CS / DS / AI courses: 10% deduction per day late, capped at 50%. Extensions for documented medical or family emergencies are granted on request to the instructor."
+  },
+  "baseline_cost_per_question_usd": 0.005,
+  "weights": {
+    "correctness": 30,
+    "faithfulness": 25,
+    "retrieval": 15,
+    "citations": 15,
+    "cost": 10,
+    "safety": 5
+  }
+}
