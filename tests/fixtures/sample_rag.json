@@ -1,0 +1,21 @@
+{
+  "submission_id": "sub_d4_rag_001_v3",
+  "student_id": "asukul",
+  "track_id": "rag_treasure_hunt",
+  "submission_timestamp": "2026-06-15T14:32:00Z",
+  "model_used": "claude-haiku-4-5",
+  "prompt_version": "v3",
+  "self_reported_strategy": "Hybrid BM25 + dense, top-5 chunks",
+  "track_payload": {
+    "answers": [
+      {
+        "question_id": "Q001",
+        "answer": "Generated answer text here",
+        "citations": ["doc3_chunk12", "doc8_chunk2"],
+        "retrieved_contexts": ["doc3_chunk12", "doc1_chunk4"],
+        "estimated_cost_usd": 0.0042,
+        "latency_seconds": 3.8
+      }
+    ]
+  }
+}

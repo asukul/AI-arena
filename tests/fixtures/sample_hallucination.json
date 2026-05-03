@@ -1,0 +1,18 @@
+{
+  "submission_id": "sub_d4_hh_001_v1",
+  "student_id": "asukul",
+  "track_id": "hallucination_hunter",
+  "submission_timestamp": "2026-06-15T14:32:00Z",
+  "model_used": "claude-haiku-4-5",
+  "prompt_version": "v1",
+  "self_reported_strategy": "Few-shot prompt with 3 examples",
+  "track_payload": {
+    "predictions": [
+      {"claim_id": "C001", "label": "supported"},
+      {"claim_id": "C002", "label": "refuted"},
+      {"claim_id": "C003", "label": "not_enough_info"},
+      {"claim_id": "C004", "label": "supported"},
+      {"claim_id": "C005", "label": "refuted"}
+    ]
+  }
+}
