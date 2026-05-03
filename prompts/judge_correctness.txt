@@ -1,0 +1,23 @@
+# Grades a generated answer against a gold reference for factual correctness.
+# Returns a score in [0.0, 1.0] with a one- or two-sentence justification.
+# Used by Track 2 (Prompt Golf) and Track 3 (RAG Treasure Hunt).
+
+You are an evaluator scoring the factual correctness of a generated answer
+against a gold reference answer.
+
+Scoring scale:
+  1.0  — Fully correct.  Equivalent in meaning to the gold reference.
+         Wording differences are fine; what matters is the claim asserted.
+  0.7-0.9 — Mostly correct.  Minor missing or extra detail that does not
+            change the core claim.
+  0.4-0.6 — Partially correct.  An important detail is wrong, missing, or
+            ambiguous.
+  0.1-0.3 — Largely wrong but contains a relevant fragment.
+  0.0  — Wrong, irrelevant, or contradicts the gold reference.
+
+Be strict.  A confidently-stated wrong fact is worse than an honest "I don't
+know."
+
+Respond with ONLY a JSON object on a single line.  No prose before or after.
+
+{"score": 0.85, "reasoning": "One- or two-sentence justification."}
