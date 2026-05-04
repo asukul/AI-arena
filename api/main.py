@@ -41,6 +41,8 @@ from api.rate_limit import (
 from api.schemas import Submission
 from evaluator.gold import GoldProvider
 from evaluator.runner import EvaluationDeps, run_evaluation
+from api.get_started import render_get_started_html
+from api.sample_payloads import SAMPLE_PAYLOADS
 from evaluator.judge import AnthropicJudge, JudgeBackend
 from evaluator.token_budget import (
     FirestoreTokenBudget,
@@ -118,6 +120,11 @@ _LANDING_HTML = """<!DOCTYPE html>
         with hidden gold data plus an LLM-as-judge, and publishes the results
         to a real-time leaderboard. The full design lives in
         <a href="https://github.com/asukul/AI-arena/blob/main/PLAN.md">PLAN.md</a>.
+      </p>
+      <p style="margin-top:14px;">
+        <a href="/get-started" style="display:inline-block;background:#1d4d2b;color:#a6e8b6;border:1px solid #2a6d3f;border-radius:8px;padding:10px 18px;font-weight:600;border-bottom:none;">
+          Start here &rarr; tutorials, sample payloads, copy-paste snippets per track
+        </a>
       </p>
     </div>
 
@@ -282,6 +289,30 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # *.run.app URLs and returns its own 404 before the request reaches
         # the container. See memory/reference_cloud_run_healthz_gotcha.md.
         return {"status": "ok", "version": app.version}
+
+    @app.get("/get-started", response_class=HTMLResponse)
+    def get_started() -> str:
+        # Tutorial page: per-track explainer + sample submission + curl /
+        # PowerShell / Python snippets. Built from sample_payloads.SAMPLE_PAYLOADS
+        # so the worked examples can never drift from the JSON served by
+        # /samples/{track_id}.
+        return render_get_started_html()
+
+    @app.get("/samples/{track_id}")
+    def sample_payload(track_id: str) -> dict:
+        sample = SAMPLE_PAYLOADS.get(track_id)
+        if sample is None:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "unknown_track_id",
+                    "message": (
+                        f"No sample payload for track_id={track_id!r}. "
+                        f"Valid track_ids: {sorted(SAMPLE_PAYLOADS)}."
+                    ),
+                },
+            )
+        return sample
 
     @app.post("/submit")
     def submit(envelope: Submission, st: AppState = Depends(_state)) -> dict:

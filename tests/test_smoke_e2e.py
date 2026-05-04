@@ -73,6 +73,62 @@ def test_root_returns_html_landing_page(client: TestClient) -> None:
     assert "/health" in body
     assert "/leaderboard/hallucination_hunter" in body
     assert "/docs" in body
+    # Landing page advertises the Get Started tutorial.
+    assert "/get-started" in body
+
+
+def test_get_started_page_covers_all_four_tracks(client: TestClient) -> None:
+    response = client.get("/get-started")
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    body = response.text
+    # Each track has an anchor section + sample-download link.
+    for track in ("hallucination_hunter", "prompt_golf", "rag_treasure_hunt", "meta_judge"):
+        assert f'href="/samples/{track}"' in body
+        assert f'href="/leaderboard/{track}"' in body
+    # Per-track headings are present so the TOC links resolve.
+    for anchor in ("track-1", "track-2", "track-3", "track-4"):
+        assert f'id="{anchor}"' in body
+
+
+@pytest.mark.parametrize("track_id", [
+    "hallucination_hunter",
+    "prompt_golf",
+    "rag_treasure_hunt",
+    "meta_judge",
+])
+def test_sample_payload_returns_valid_envelope(client: TestClient, track_id: str) -> None:
+    response = client.get(f"/samples/{track_id}")
+    assert response.status_code == 200
+    body = response.json()
+    # Sample matches the canonical envelope shape so students can post it
+    # back unchanged (after replacing the placeholder IDs).
+    assert body["track_id"] == track_id
+    assert "submission_id" in body
+    assert "student_id" in body
+    assert "track_payload" in body
+
+
+def test_sample_payload_unknown_track_returns_404(client: TestClient) -> None:
+    response = client.get("/samples/this-track-does-not-exist")
+    assert response.status_code == 404
+    body = response.json()
+    # FastAPI wraps HTTPException.detail under "detail"; downstream tooling
+    # should see a structured error not a stack trace.
+    assert "detail" in body
+    assert body["detail"]["error"] == "unknown_track_id"
+
+
+def test_sample_payload_can_round_trip_through_submit(client: TestClient) -> None:
+    """Pull the Hallucination starter, fill in IDs, post — should score 1.0."""
+    sample = client.get("/samples/hallucination_hunter").json()
+    sample["submission_id"] = "sub_round_trip_001"
+    sample["student_id"] = "round_trip_student"
+    submit = client.post("/submit", json=sample)
+    assert submit.status_code == 200, submit.text
+    leaderboard = client.get("/leaderboard/hallucination_hunter").json()
+    entry = next(e for e in leaderboard["entries"] if e["student_id"] == "round_trip_student")
+    assert entry["final_score"] == pytest.approx(1.0)
 
 
 def test_perfect_hallucination_submission_scores_one_and_lands_on_leaderboard(
