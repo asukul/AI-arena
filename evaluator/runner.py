@@ -20,6 +20,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from api.logging_config import get_logger
 from api.schemas import (
     ScoreResult,
     Submission,
@@ -135,5 +136,21 @@ def run_evaluation(submission: Submission, deps: EvaluationDeps) -> ScoreResult:
                 score=result.final_score,
                 comment=f"Auto-graded: {submission.track_id} = {result.final_score:.4f}",
             )
+
+    # Structured event for Cloud Logging — lets ops queries do per-student
+    # token attribution and per-track success-rate aggregation without
+    # touching Firestore. Documented in docs/operations.md.
+    # Resolve the logger here (not at module import) so tests that capture
+    # stdout via capfd see freshly-bound output for each call.
+    judge_tokens = getattr(judge_for_run, "tokens_used_this_run", 0)
+    get_logger(__name__).info(
+        "submission_scored",
+        submission_id=submission.submission_id,
+        student_id=submission.student_id,
+        track_id=submission.track_id,
+        final_score=result.final_score,
+        judge_tokens=int(judge_tokens),
+        error=result.error,
+    )
 
     return result

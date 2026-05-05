@@ -526,6 +526,19 @@ r = requests.post(f"{{BASE_URL}}/submit", json=sample)
 print(r.status_code, json.dumps(r.json(), indent=2))
 """
 
+    reference_block = ""
+    if t.reference_notebook:
+        reference_block = f"""
+  <div class="section-card">
+    <h2>Reference solution</h2>
+    <p>A complete working baseline lives at
+    <a href="{escape(t.reference_notebook)}"><code>docs/track{t.number}_reference_solution.ipynb</code></a>.
+    It implements the full pipeline end-to-end &mdash; not a perfect score, but a
+    fork-able floor. The notebook's last section names the dimensions where this
+    baseline is weak so you know where to push first.</p>
+  </div>
+"""
+
     return f"""
 <section data-tab="code" class="tab-panel">
   <div class="section-card">
@@ -536,6 +549,8 @@ print(r.status_code, json.dumps(r.json(), indent=2))
     by default and walks through every track end-to-end &mdash;
     <strong>Copy &amp; Edit</strong> it like a Kaggle kernel.</p>
   </div>
+
+  {reference_block}
 
   <div class="section-card">
     <h2>Submit from your own machine</h2>

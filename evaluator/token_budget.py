@@ -173,7 +173,7 @@ class FirestoreTokenBudget:
 
 # ---------- Budget-enforcing judge wrapper ----------
 
-@dataclass(frozen=True)
+@dataclass
 class BudgetedJudge:
     """Wraps a `JudgeBackend` and rejects calls that would overflow the
     student's daily token budget.
@@ -183,11 +183,17 @@ class BudgetedJudge:
     if a student is at 49,950/50,000 and makes a call costing 200 tokens,
     they end up at 50,150 — within the noise of any real budget. The
     next call is then refused.
+
+    `tokens_used_this_run` is a per-instance counter so the runner can log
+    "this submission spent N tokens" without race-reading the shared store
+    (concurrent submissions for the same student would otherwise read each
+    other's deltas).
     """
 
     inner: JudgeBackend
     store: TokenBudgetStore
     student_id: str
+    tokens_used_this_run: int = 0
 
     def call(self, *, system: str, user: str, model: str | None = None) -> JudgeResponse:
         used = self.store.tokens_used_today(self.student_id)
@@ -200,4 +206,5 @@ class BudgetedJudge:
             )
         response = self.inner.call(system=system, user=user, model=model)
         self.store.record_tokens(self.student_id, response.total_tokens)
+        self.tokens_used_this_run += response.total_tokens
         return response

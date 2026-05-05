@@ -58,21 +58,24 @@ timestamp >= timestamp_sub(timestamp_now(), interval 1 hour)
 
 ### Judge tokens used per student today
 
-Run this in Cloud Shell — the in-browser Logs Explorer can't aggregate.
+The `submission_scored` event carries both `student_id` and `judge_tokens`
+for the submission, so per-student aggregation runs cleanly off Cloud
+Logging — no Firestore read needed.
 
 ```bash
 TODAY=$(date -u +%Y-%m-%dT00:00:00Z)
 gcloud logging read --project=ai-arena-platform \
-  "jsonPayload.event=\"judge_call\" AND timestamp>=\"$TODAY\"" \
-  --format='value(jsonPayload.tokens_in,jsonPayload.tokens_out)' \
+  "jsonPayload.event=\"submission_scored\" AND timestamp>=\"$TODAY\"" \
+  --format='value(jsonPayload.student_id,jsonPayload.judge_tokens)' \
   --limit=10000 \
-| awk '{ sum += $1 + $2 } END { print sum " tokens total today" }'
+| awk '{ a[$1] += $2 } END { for (s in a) print s, a[s] }' \
+| sort -k2 -n -r
 ```
 
-For per-student breakdown, the platform's structured logger doesn't include
-`student_id` on `judge_call` events (the call doesn't have it directly). Use
-the Firestore `submissions/` collection or the `daily_token_budgets/` rate-limit
-counter instead — those are the authoritative per-student records.
+Output is `student_id <tab> tokens_used_today`, sorted descending. The
+authoritative per-student counter still lives in Firestore at
+`token_budgets/{student}_{date}` — the log query is for fast cohort
+overviews, not for the rate-limit decision.
 
 ### Students bouncing off the daily token cap
 

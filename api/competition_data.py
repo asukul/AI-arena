@@ -50,6 +50,7 @@ class TrackMeta:
     data_files: list[DataFile]
     judge_tokens_per_day: int      # 0 if track doesn't call the judge
     rate_limit_per_day: int = 5    # current platform default; overrides per-track if needed
+    reference_notebook: str | None = None  # absolute URL of a reference-solution notebook, if one exists
 
     @property
     def sample(self) -> dict[str, Any]:
@@ -212,6 +213,7 @@ _T3 = TrackMeta(
         ),
     ],
     judge_tokens_per_day=50000,
+    reference_notebook="https://github.com/asukul/AI-arena/blob/main/docs/track3_reference_solution.ipynb",
 )
 
 _T4 = TrackMeta(

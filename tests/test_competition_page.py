@@ -271,3 +271,20 @@ def test_competition_page_has_mobile_breakpoint(client: TestClient) -> None:
     """Phones (<=600px) must get the tightened padding / font sizes."""
     body = client.get("/competitions/prompt_golf").text
     assert "@media (max-width: 600px)" in body
+
+
+# ---------- Reference solution callout ----------
+
+def test_track3_code_tab_links_reference_notebook(client: TestClient) -> None:
+    """Track 3 has a published reference baseline; the Code tab must surface it."""
+    body = client.get("/competitions/rag_treasure_hunt").text
+    assert "track3_reference_solution.ipynb" in body
+    assert "Reference solution" in body
+
+
+def test_other_tracks_have_no_reference_callout(client: TestClient) -> None:
+    """Tracks without a reference notebook must not show an empty callout —
+    if we add one for Track 1/2/4 later, set TrackMeta.reference_notebook."""
+    for track_id in ("hallucination_hunter", "prompt_golf", "meta_judge"):
+        body = client.get(f"/competitions/{track_id}").text
+        assert "Reference solution" not in body, f"unexpected callout on {track_id}"

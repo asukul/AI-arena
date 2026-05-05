@@ -94,6 +94,16 @@ New-LogMetric `
     -Description "5xx responses from d4-arena-api (real failures, not 4xx user errors)." `
     -Filter "$ServiceFilter AND httpRequest.status>=500"
 
+New-LogMetric `
+    -Name "arena_submissions_scored" `
+    -Description "End-to-end scored submissions (one per /submit that finished, success or failure)." `
+    -Filter "$ServiceFilter AND jsonPayload.event=`"submission_scored`""
+
+New-LogMetric `
+    -Name "arena_submissions_failed" `
+    -Description "Scored submissions that landed with an error string (token-budget, validation, scorer crash)." `
+    -Filter "$ServiceFilter AND jsonPayload.event=`"submission_scored`" AND jsonPayload.error!=`"`""
+
 # ---------- Cloud Monitoring dashboard ----------
 #
 # The dashboard JSON is assembled inline so the source of truth is this

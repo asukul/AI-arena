@@ -93,3 +93,52 @@ def test_notebook_explains_kappa_for_meta_judge(nb: dict) -> None:
     # Either the kappa symbol or the linear-weighted formulation.
     assert "Cohen" in body or "κ" in body
     assert "linear-weighted" in body
+
+
+# ---------- Track 3 reference solution notebook ----------
+
+TRACK3_NB = REPO_ROOT / "docs" / "track3_reference_solution.ipynb"
+
+
+@pytest.fixture(scope="module")
+def track3_nb() -> dict:
+    return json.loads(TRACK3_NB.read_text(encoding="utf-8"))
+
+
+def test_track3_reference_notebook_is_valid(track3_nb: dict) -> None:
+    assert track3_nb.get("nbformat") == 4
+    assert track3_nb["cells"], "no cells"
+
+
+def test_track3_reference_code_cells_parse(track3_nb: dict) -> None:
+    failures: list[tuple[int, str]] = []
+    for i, c in enumerate(track3_nb["cells"]):
+        if c["cell_type"] != "code":
+            continue
+        src = _cell_source(c)
+        src = "\n".join(line for line in src.split("\n") if not line.lstrip().startswith("%"))
+        try:
+            ast.parse(src)
+        except SyntaxError as e:
+            failures.append((i, str(e)))
+    assert not failures, f"syntax errors: {failures}"
+
+
+def test_track3_reference_implements_full_pipeline(track3_nb: dict) -> None:
+    """Hits every dimension of the rubric — retrieval, citations, cost, safety,
+    grounded prompting. If any of these regress, students get a meaningfully
+    weaker baseline."""
+    body = "\n".join(_cell_source(c) for c in track3_nb["cells"])
+    # Retrieval
+    assert "BM25" in body
+    assert "top_k" in body
+    # Citation parsing
+    assert "parse_citations" in body
+    # Grounded system prompt
+    assert "ONLY the chunks" in body
+    assert "[chunk_id]" in body
+    # Cost tracking
+    assert "estimated_cost_usd" in body
+    # Submission flow + leaderboard read
+    assert "rag_treasure_hunt" in body
+    assert "/leaderboard/rag_treasure_hunt" in body or "leaderboard/rag_treasure_hunt" in body
