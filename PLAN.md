@@ -243,7 +243,7 @@ Every track uses this envelope. The `track_payload` differs per track but the wr
 ### Day 6 — Documentation + Track 4 (meta-judge)
 - [x] Track 4 evaluator (`evaluator/tracks/meta_judge.py`): Cohen's kappa
 - [x] Instructor gold-rating fixture for kappa computation (`corpora/gold/meta_judge.json`)
-- [ ] Update student starter notebook with all four tracks (notebook is currently Track 1 only — extend in a follow-up commit)
+- [x] Update student starter notebook with all four tracks (single notebook, anchored sections per track, pulls canonical samples from `/samples/{track_id}`)
 - [x] FAQ doc (`docs/faq.md`): "why did I get this score?" common cases
 - [x] README with one-paragraph summary + run instructions
 
