@@ -90,6 +90,14 @@ def test_get_started_page_covers_all_four_tracks(client: TestClient) -> None:
         assert f'id="{anchor}"' in body
 
 
+def test_get_started_page_links_to_competition_pages(client: TestClient) -> None:
+    """Banner at the top of /get-started should point students at the new Kaggle-style UI."""
+    body = client.get("/get-started").text
+    assert "Browse competitions" in body
+    # The banner CTA should land on the card grid.
+    assert 'class="banner"' in body
+
+
 @pytest.mark.parametrize("track_id", [
     "hallucination_hunter",
     "prompt_golf",

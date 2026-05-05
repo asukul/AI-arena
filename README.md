@@ -32,6 +32,63 @@ Kaggle-style competition platform for the **D4 Summer 2026 Bootcamp** (LLM, GenA
 | `GET` | `/health` | Liveness probe (note: not `/healthz` — see troubleshooting) |
 | `GET` | `/docs`, `/redoc` | OpenAPI references |
 
+## What students see
+
+The platform is modeled on Kaggle's competition layout — anyone who has used
+Kaggle should recognize the shape immediately.
+
+**Landing (`/`):** card grid of all four competitions. Each card shows live
+submission/student counts and the current top student.
+
+```
+┌─ AI Arena ────────────────────────────────────────────────────────────────┐
+│  Competitions  Docs  GitHub                                               │
+├───────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│  AI Arena                                                                 │
+│  Kaggle-style competition platform · D4 Summer 2026 Bootcamp · ISU        │
+│  [v0.1.0 live] [4 active competitions]                                    │
+│                                                                           │
+│  ACTIVE COMPETITIONS                                                      │
+│  ┌─────────────────────────────────────┐ ┌─────────────────────────────┐  │
+│  │ TRACK 1                          →  │ │ TRACK 2                  →  │  │
+│  │ Hallucination Hunter                │ │ Prompt Golf                 │  │
+│  │ Classify each claim as supported,…  │ │ Find the shortest prompt…   │  │
+│  │ EVAL  macro-F1                      │ │ EVAL  judge accuracy × …    │  │
+│  │ ─────────────────────────────────── │ │ ─────────────────────────── │  │
+│  │ 3        3        qa_tester_2026…   │ │ 0    0    —                 │  │
+│  │ subs   students   top student       │ │ subs students top student   │  │
+│  └─────────────────────────────────────┘ └─────────────────────────────┘  │
+│  ┌─ TRACK 3 ────────────┐  ┌─ TRACK 4 ─────────────────────────────────┐  │
+│  │ RAG Treasure Hunt …  │  │ Build Your Own AI Judge …                 │  │
+│  └──────────────────────┘  └───────────────────────────────────────────┘  │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
+**Per-track page (`/competitions/{track_id}`):** Kaggle-style horizontal tabs,
+persistent blue **Submit Entry** button, evaluation metric pinned in the header.
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│ TRACK 3                                                  ┌─────────────┐ │
+│ RAG Treasure Hunt                                        │ ↑ Submit    │ │
+│ Build a retrieval pipeline over the ISU course catalog   │   Entry     │ │
+│ [Active] [Eval: weighted rubric (30/25/15/15/10/5)]      └─────────────┘ │
+│ [N submissions] [N students]                                              │
+├───────────────────────────────────────────────────────────────────────────┤
+│ Overview │ Data │ Code │ Leaderboard │ Rules                              │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
+**Submit modal:** opens from the persistent button. Three input modes — *Paste
+JSON*, *Upload .json*, *Use sample as starting point*. Submits via `fetch`
+to `/submit` and shows the response inline. Students never leave the page.
+
+The single source of truth for per-track metadata (name, metric, sample
+payload, public files, rules) lives in
+[`api/competition_data.py`](api/competition_data.py); both the landing and the
+per-track shell read from it.
+
 ## Quick start (local dev — no GCP needed)
 
 ```powershell

@@ -270,6 +270,20 @@ _HEAD_AND_NAV = """<!DOCTYPE html>
     }
     header.page h1   { font-size: 48px; margin: 0 0 8px 0; letter-spacing: -1px; }
     header.page p    { color: #a8b1bf; margin: 0; font-size: 18px; }
+    .banner {
+      max-width: 1080px; margin: 0 auto 8px; padding: 14px 22px;
+      background: linear-gradient(135deg, #1c3654 0%, #1d2434 100%);
+      border: 1px solid #2a4d77; border-radius: 12px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; flex-wrap: wrap;
+    }
+    .banner p { color: #d6dde6; margin: 0; font-size: 14px; }
+    .banner a {
+      background: #2c80ff; color: white; padding: 8px 16px; border-radius: 6px;
+      font-weight: 600; font-size: 14px; border-bottom: none;
+      white-space: nowrap; text-decoration: none;
+    }
+    .banner a:hover { background: #4592ff; border-bottom: none; }
     nav.toc {
       max-width: 1080px; margin: 0 auto; padding: 0 24px 16px;
       display: flex; gap: 12px; flex-wrap: wrap;
@@ -322,6 +336,14 @@ _HEAD_AND_NAV = """<!DOCTYPE html>
     <h1>Get <span class="accent">Started</span></h1>
     <p>How to submit to each AI Arena track. Pick a track below, copy the sample, edit it, post.</p>
   </header>
+  <div class="banner">
+    <p>
+      <strong>Prefer the Kaggle-style UI?</strong> Each track now has its own
+      page with an in-browser submit button, live leaderboard, and a "first
+      submission in 60 seconds" path &mdash; no curl required.
+    </p>
+    <a href="/">Browse competitions &rarr;</a>
+  </div>
   <nav class="toc" aria-label="Tracks">
     <a href="/">&larr; Home</a>
     <a href="#preamble">The submission envelope</a>

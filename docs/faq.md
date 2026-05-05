@@ -1,10 +1,36 @@
 # AI Arena — FAQ
 
+## "Where do I start?"
+
+Open the platform at <https://d4-arena-api-77646749251.us-central1.run.app/>.
+You'll see a Kaggle-style **card grid of all four competitions**. Click any
+card and you'll land on a per-track page with these tabs:
+
+- **Overview** — what the track is, the metric, "first submission in 60 seconds"
+- **Data** — public files, sample submission, schema
+- **Code** — starter notebook + copy-paste PowerShell / bash / Python snippets
+- **Leaderboard** — live, auto-refreshes every 10 seconds
+- **Rules** — daily limits, hidden test set, anti-cheat policy
+
+The **blue "Submit Entry" button** in the top-right is visible from every
+tab. Click it, pick "Use sample as starting point," replace `student_id`
+with your own, and hit Submit. You'll see your score on the Leaderboard tab
+within a few seconds. No terminal, no curl, no API key required for the
+basic flow.
+
+If you prefer code, open the notebook at
+[`docs/student_starter.ipynb`](student_starter.ipynb) — it covers all four
+tracks with anchored sections, pulls canonical samples from `/samples/{track_id}`,
+and has a single `submit_and_show()` helper that posts to `/submit` and
+prints where you landed.
+
 ## "Why did I get this score?"
 
 Every track is documented in [`judge_rubrics.md`](judge_rubrics.md).  Read
 the Track 1 / 2 / 3 / 4 sections for the exact metric and how the
-per-dimension breakdown is computed.
+per-dimension breakdown is computed. Each section corresponds 1:1 with the
+**Overview** tab on the live `/competitions/{track_id}` page — they share a
+single source of truth in [`api/competition_data.py`](../api/competition_data.py).
 
 If your score still seems wrong:
 
@@ -79,8 +105,12 @@ submissions are *not* cached — each one runs through the scorer fresh.
   the bootcamp.
 - The `student_id` in submissions IS your Canvas/NetID — it's used to
   reconcile leaderboard entries with grade passback.
-- Public leaderboard shows pseudonymous entries by default.  Real names
-  stay in Canvas only.
+- For the v1 cohort, the leaderboard renders the raw `student_id`. The
+  pseudonym scheme (animal names, student-chosen handles, etc.) is a
+  pending decision in [`PLAN.md`](../PLAN.md) § Open decisions; if it
+  lands as Hybrid or Public during the bootcamp, the leaderboard will
+  switch to handles automatically and your real ID will only appear in
+  Canvas.
 - After the bootcamp ends, all per-student data is deleted; aggregate
   statistics (anonymized) may be published.
 
