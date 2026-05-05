@@ -1,0 +1,54 @@
+name: CI
+
+# Runs the full test suite on every push to main and every pull request
+# targeting main. Keeps the green-test contract honest while the bootcamp
+# is live — anything that breaks the platform fails CI before deploy.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-flight runs on the same ref when a newer push comes in.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: pytest (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # PLAN.md requires 3.12+. Test the floor (3.12) so we don't accidentally
+        # adopt a 3.13-only feature; add 3.13 if/when production runtime moves.
+        python-version: ["3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Lint (ruff)
+        # Soft-fail for now — the codebase passes ruff but tightening the
+        # config can wait. If you want to make it blocking later, drop the
+        # `|| true` suffix.
+        run: ruff check . || true
+
+      - name: Run pytest
+        env:
+          ARENA_LOCAL_DEV: "1"
+        run: pytest -xvs --tb=short
