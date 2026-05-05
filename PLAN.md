@@ -266,12 +266,15 @@ Every track uses this envelope. The `track_payload` differs per track but the wr
 
 ---
 
-## Open decisions to resolve before Day 1
+## Open decisions
 
-- [ ] **First RAG corpus:** ISU course catalog (recommended), DSpace, or Wikipedia subset?
-- [ ] **API key model:** shared D4 key (easier, costs more), BYO student keys (cheaper, less equitable), or hybrid (basic tracks shared, advanced BYO)?
-- [ ] **Leaderboard visibility:** class-only via Canvas, fully public, or pseudonymous-public + identified-in-Canvas (recommended)?
-- [ ] **Pseudonym scheme** if going public: numeric IDs, animal names, or student-chosen handles?
+### Resolved
+- [x] **First RAG corpus:** ISU course catalog (locked at Day 4 — see `corpora/isu_course_catalog/`).
+- [x] **API key model:** **Shared D4 key** (locked 2026-05-04 — see [`docs/api_key_policy.md`](docs/api_key_policy.md)). Anthropic Haiku 4.5 for the judge, Anthropic Opus 4.7 for cross-family re-grade, Gemini Flash recommended for student inference (free tier). Defense in depth via per-student daily token budget (`evaluator/token_budget.py`), GCP project budget alert (`scripts/budget_alert.ps1`), and Anthropic workspace monthly cap. Rotation procedure: `scripts/rotate_secret.ps1`.
+
+### Still open (deferred — don't block Day 1)
+- [ ] **Leaderboard visibility:** class-only via Canvas, fully public, or pseudonymous-public + identified-in-Canvas (recommended). Land this before Day 5 when the leaderboard becomes student-facing. Default behavior today is fully public on the Cloud Run URL — fine for build-out and small-cohort testing.
+- [ ] **Pseudonym scheme** if going public: numeric IDs, animal names, or student-chosen handles. Only needed if the visibility decision lands as Hybrid or Public; until then, `student_id` is shown as-is.
 
 ---
 
@@ -281,10 +284,11 @@ Every track uses this envelope. The `track_payload` differs per track but the wr
 **Lean budget:** ~$500 with BYO student keys and Max 20x billed elsewhere.
 
 **Guardrails to implement:**
-- GCP budget alert at $200 (warns Adisak)
-- GCP budget hard cap at $400 (auto-disables billing as last resort)
-- Per-student daily token budget in `judge.py` (default: 50k tokens/day per student)
-- Anthropic API workspace spend limit set in console
+- GCP budget alert at $200 (warns Adisak) — `scripts/budget_alert.ps1` (done)
+- GCP budget hard cap at $400 (auto-disables billing as last resort) — same script, 110% threshold
+- Per-student daily token budget — `evaluator/token_budget.py` (done; default 50k tokens/day, configurable via `DAILY_TOKEN_BUDGET`)
+- Anthropic API workspace spend limit set in console — recommended $500/month, see [`docs/api_key_policy.md`](docs/api_key_policy.md)
+- Off-switch for emergency stops — `scripts/rotate_secret.ps1` with empty value
 
 ---
 

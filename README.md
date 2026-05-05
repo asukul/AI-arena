@@ -83,19 +83,31 @@ Invoke-RestMethod "$url/submit" -Method POST -ContentType "application/json" `
 Invoke-RestMethod "$url/leaderboard/hallucination_hunter"
 ```
 
-### Populating real secrets
+### Populating / rotating real secrets
 
 After bootstrap, the three secrets (`canvas-api-token`, `canvas-webhook-secret`,
-`anthropic-api-key`) hold placeholder strings.  Replace them before launch:
+`anthropic-api-key`) hold placeholder strings. The full policy (which key is
+used where, spend caps, audit queries, off-switch) is in
+[`docs/api_key_policy.md`](docs/api_key_policy.md). To set or rotate any of them:
 
 ```powershell
-# Pipe the real value via stdin to avoid file artifacts
-"sk-ant-…" | gcloud secrets versions add anthropic-api-key   --project=ai-arena-platform --data-file=-
-"…"        | gcloud secrets versions add canvas-api-token    --project=ai-arena-platform --data-file=-
-"…"        | gcloud secrets versions add canvas-webhook-secret --project=ai-arena-platform --data-file=-
+# Pipe the real value via stdin — never paste it into a file.
+"sk-ant-…NEW…" | pwsh ./scripts/rotate_secret.ps1 -Name anthropic-api-key
 
-# Force Cloud Run to pick up the new versions on the next request
-gcloud run services update d4-arena-api --region=us-central1 --project=ai-arena-platform --update-env-vars _SECRETS_REFRESHED=$(Get-Date -UFormat %s)
+# Same flow for the Canvas secrets:
+"…canvas-token…"  | pwsh ./scripts/rotate_secret.ps1 -Name canvas-api-token
+"…webhook-secret…" | pwsh ./scripts/rotate_secret.ps1 -Name canvas-webhook-secret
+```
+
+The script creates a new Secret Manager version and bumps a no-op env var on
+Cloud Run so the next request reloads the secret. Old versions stay enabled
+for rollback; disable them in the Secret Manager console once the new one is
+confirmed serving.
+
+Emergency off-switch (stops all judge calls without redeploying):
+
+```powershell
+"" | pwsh ./scripts/rotate_secret.ps1 -Name anthropic-api-key
 ```
 
 ## Troubleshooting (lessons from Day 1)
