@@ -62,19 +62,18 @@ def test_health(client: TestClient) -> None:
 
 
 def test_root_returns_html_landing_page(client: TestClient) -> None:
-    """Bare root must return a friendly HTML page, not FastAPI's JSON 404."""
+    """Root returns the Kaggle-style competition card grid, not FastAPI's JSON 404."""
     response = client.get("/")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
     body = response.text
     assert "AI" in body and "Arena" in body
-    # Links to the documented endpoints should be present so a curious
-    # visitor can navigate without reading code.
-    assert "/health" in body
-    assert "/leaderboard/hallucination_hunter" in body
-    assert "/docs" in body
-    # Landing page advertises the Get Started tutorial.
+    # Each track gets a card linking into its per-track competition page.
+    for track in ("hallucination_hunter", "prompt_golf", "rag_treasure_hunt", "meta_judge"):
+        assert f'href="/competitions/{track}"' in body
+    # Footer / topbar still link to docs surfaces a curious visitor expects.
     assert "/get-started" in body
+    assert "/docs" in body
 
 
 def test_get_started_page_covers_all_four_tracks(client: TestClient) -> None:

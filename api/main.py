@@ -24,13 +24,17 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
+from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 
 from api.canvas import CanvasClient
+from api.competition import render_competition_html
+from api.competition_data import TRACKS_META, get_track
 from api.config import Settings, get_settings
 from api.errors import install_error_handlers
+from api.landing import render_landing_html
 from api.logging_config import configure_logging, get_logger
 from api.queue import CloudTasksQueue, InMemoryQueue, SubmissionQueue
 from api.rate_limit import (
@@ -54,119 +58,6 @@ from leaderboard.firestore_client import (
     InMemoryLeaderboard,
     LeaderboardStore,
 )
-
-
-# Static landing page for GET /. Tiny on purpose — no template engine, no
-# external assets. Served by api.main:root().
-_LANDING_HTML = """<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI Arena — D4 Summer 2026 Bootcamp</title>
-  <style>
-    :root { color-scheme: dark; }
-    body {
-      margin: 0; padding: 0; min-height: 100vh;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      background: #0c1017; color: #f5f5f7;
-    }
-    main { max-width: 960px; margin: 0 auto; padding: 56px 24px; }
-    .accent { color: #ffc107; }
-    h1 { font-size: 56px; margin: 0 0 8px 0; letter-spacing: -1px; }
-    h1 .accent { display: inline; }
-    .tagline { color: #a8b1bf; margin: 0 0 32px 0; font-size: 18px; }
-    .card {
-      background: #151c28; border: 1px solid #232c3d; border-radius: 12px;
-      padding: 24px; margin: 18px 0;
-    }
-    .card h2 { margin: 0 0 12px 0; font-size: 22px; color: #ffd460; }
-    .card p { color: #c9d1de; margin: 0 0 12px 0; line-height: 1.55; }
-    code, pre {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 13px; color: #e6edf6;
-    }
-    code { background: #232c3d; padding: 2px 6px; border-radius: 4px; }
-    a { color: #75c2ff; text-decoration: none; border-bottom: 1px dotted #4d8bd1; }
-    a:hover { color: #a4d6ff; border-bottom-style: solid; }
-    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #232c3d; font-size: 14px; }
-    th { color: #a8b1bf; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .pill {
-      display: inline-block; padding: 2px 10px; border-radius: 999px;
-      background: #1d4d2b; color: #a6e8b6; font-size: 12px; font-weight: 600;
-    }
-    footer {
-      max-width: 960px; margin: 0 auto; padding: 24px;
-      color: #6d7787; font-size: 12px; text-align: center;
-    }
-  </style>
-</head>
-<body>
-  <main>
-    <h1>AI <span class="accent">Arena</span></h1>
-    <p class="tagline">
-      Kaggle-style competition platform for the
-      <strong>D4 Summer 2026 Bootcamp</strong> &mdash; Iowa State University,
-      Department of Computer Science.
-      <span class="pill">v{VERSION} live</span>
-    </p>
-
-    <div class="card">
-      <h2>What this service is</h2>
-      <p>
-        AI Arena receives student submissions for four competition tracks
-        (classification, prompt-golf, RAG, build-your-own-judge), scores them
-        with hidden gold data plus an LLM-as-judge, and publishes the results
-        to a real-time leaderboard. The full design lives in
-        <a href="https://github.com/asukul/AI-arena/blob/main/PLAN.md">PLAN.md</a>.
-      </p>
-      <p style="margin-top:14px;">
-        <a href="/get-started" style="display:inline-block;background:#1d4d2b;color:#a6e8b6;border:1px solid #2a6d3f;border-radius:8px;padding:10px 18px;font-weight:600;border-bottom:none;">
-          Start here &rarr; tutorials, sample payloads, copy-paste snippets per track
-        </a>
-      </p>
-    </div>
-
-    <div class="card">
-      <h2>Try the API</h2>
-      <table>
-        <thead>
-          <tr><th>Method</th><th>Path</th><th>Purpose</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><code>GET</code></td><td><a href="/health">/health</a></td><td>Liveness probe</td></tr>
-          <tr><td><code>GET</code></td><td><a href="/docs">/docs</a></td><td>Interactive Swagger UI</td></tr>
-          <tr><td><code>GET</code></td><td><a href="/redoc">/redoc</a></td><td>Alternative API reference</td></tr>
-          <tr><td><code>POST</code></td><td><code>/submit</code></td><td>Submit a graded entry</td></tr>
-          <tr><td><code>GET</code></td><td><a href="/leaderboard/hallucination_hunter">/leaderboard/hallucination_hunter</a></td><td>Track 1 leaderboard JSON</td></tr>
-          <tr><td><code>GET</code></td><td><a href="/leaderboard/prompt_golf">/leaderboard/prompt_golf</a></td><td>Track 2 leaderboard JSON</td></tr>
-          <tr><td><code>GET</code></td><td><a href="/leaderboard/rag_treasure_hunt">/leaderboard/rag_treasure_hunt</a></td><td>Track 3 leaderboard JSON</td></tr>
-          <tr><td><code>GET</code></td><td><a href="/leaderboard/meta_judge">/leaderboard/meta_judge</a></td><td>Track 4 leaderboard JSON</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="card">
-      <h2>Tracks</h2>
-      <table>
-        <thead><tr><th>#</th><th>Track</th><th>Metric</th></tr></thead>
-        <tbody>
-          <tr><td>1</td><td>Hallucination Hunter</td><td>macro-F1 vs hidden gold</td></tr>
-          <tr><td>2</td><td>Prompt Golf</td><td>judge accuracy &divide; tokens spent</td></tr>
-          <tr><td>3</td><td>RAG Treasure Hunt</td><td>weighted rubric (correctness 30 / faithfulness 25 / retrieval 15 / citations 15 / cost 10 / safety 5)</td></tr>
-          <tr><td>4</td><td>Build Your Own AI Judge</td><td>linear-weighted Cohen&apos;s &kappa; vs instructor gold</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </main>
-  <footer>
-    Iowa State University &middot; Department of Computer Science &middot;
-    <a href="mailto:adisak.sukul@gmail.com">Adisak Sukul</a>
-  </footer>
-</body>
-</html>
-"""
 
 
 # ---------- App-level state (built once at startup) ----------
@@ -277,11 +168,41 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return app_.state.arena  # type: ignore[no-any-return]
 
     @app.get("/", response_class=HTMLResponse)
-    def root() -> str:
-        # Bare-root visitors land here. Without this route FastAPI returns
-        # `{"detail":"Not Found"}` which looks broken to anyone hitting the
-        # service URL in a browser. Tiny static page; no template engine.
-        return _LANDING_HTML.replace("{VERSION}", app.version)
+    def root(st: AppState = Depends(_state)) -> str:
+        # Kaggle-style card grid of all four competitions. Stats come from the
+        # live leaderboard at request time so cards always show real numbers.
+        per_track_stats: dict[str, dict[str, Any]] = {}
+        for t in TRACKS_META:
+            rows = st.leaderboard.top(t.id, limit=1000)
+            students = sorted(
+                {r["student_id"] for r in rows if r.get("student_id")}
+            )
+            top_row = rows[0] if rows else None
+            per_track_stats[t.id] = {
+                "submissions": len(rows),
+                "students": len(students),
+                "top_student": top_row["student_id"] if top_row else None,
+            }
+        return render_landing_html(version=app.version, per_track_stats=per_track_stats)
+
+    @app.get("/competitions/{track_id}", response_class=HTMLResponse)
+    def competition_page(track_id: str, st: AppState = Depends(_state)) -> str:
+        # Per-track Kaggle-style page (Overview / Data / Code / Leaderboard /
+        # Rules + persistent submit modal). Returns a graceful HTML 404 body
+        # for unknown track_ids rather than the JSON {"detail":"Not Found"}.
+        if get_track(track_id) is None:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "unknown_track_id",
+                    "message": (
+                        f"No competition for track_id={track_id!r}. "
+                        f"Valid track_ids: {[t.id for t in TRACKS_META]}."
+                    ),
+                },
+            )
+        rows = st.leaderboard.top(track_id, limit=100)
+        return render_competition_html(track_id, leaderboard_rows=rows)
 
     @app.get("/health")
     def health() -> dict[str, str]:

@@ -9,12 +9,28 @@ Kaggle-style competition platform for the **D4 Summer 2026 Bootcamp** (LLM, GenA
 
 | Path | Purpose |
 |---|---|
-| `api/` | FastAPI app — Canvas webhook receiver, submission dispatcher, grade passback |
+| `api/` | FastAPI app — Canvas webhook, submission dispatcher, grade passback, Kaggle-style competition UI |
+| `api/landing.py` | Card-grid landing page (`GET /`) — one card per competition |
+| `api/competition.py` | Per-track Kaggle-style shell (`GET /competitions/{track_id}`) — Overview / Data / Code / Leaderboard / Rules tabs + persistent in-browser submit modal |
+| `api/competition_data.py` | Single source of truth for per-track metadata (name, metric, sample, files, rules) |
 | `evaluator/` | Track scorers + Claude-as-judge wrapper. One file per track under `tracks/`. |
 | `leaderboard/` | Firestore writer (server) + static HTML leaderboard (Firebase Hosting) |
 | `prompts/` | Version-controlled judge prompts as plain `.txt` files |
 | `tests/` | `pytest` — every scoring function has unit tests (happy, empty, malformed, edge) |
 | `corpora/` | RAG corpora (Track 3) — starter is the ISU course catalog |
+
+## Public routes
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/` | Card grid of all four competitions (live counts) |
+| `GET` | `/competitions/{track_id}` | Per-track Kaggle-style page — tabs + submit modal |
+| `GET` | `/get-started` | Long-form tutorial / curl recipes (kept for reference) |
+| `GET` | `/samples/{track_id}` | Canonical sample submission JSON (scores 1.0) |
+| `GET` | `/leaderboard/{track_id}` | Leaderboard JSON (used by the live-refresh JS) |
+| `POST` | `/submit` | Submit a graded entry |
+| `GET` | `/health` | Liveness probe (note: not `/healthz` — see troubleshooting) |
+| `GET` | `/docs`, `/redoc` | OpenAPI references |
 
 ## Quick start (local dev — no GCP needed)
 

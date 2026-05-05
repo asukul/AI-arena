@@ -201,22 +201,22 @@ Every track uses this envelope. The `track_payload` differs per track but the wr
 ### Day 1 — Foundation + Track 1 end-to-end
 **Goal:** A real submission to Hallucination Hunter receives a real grade and appears on the leaderboard.
 
-- [ ] Initialize repo: `pyproject.toml`, `requirements.txt`, `.gitignore`, `Dockerfile`
-- [ ] FastAPI skeleton (`api/main.py`) with `/healthz` and `/submit` endpoints
-- [ ] Canvas webhook signature verification (`api/auth.py`)
-- [ ] Cloud Tasks integration: `/submit` enqueues, evaluator pulls
-- [ ] Firestore client setup (`leaderboard/firestore_client.py`)
-- [ ] Track 1 evaluator (`evaluator/tracks/hallucination.py`): F1 on classification CSV
-- [ ] Pytest tests for Track 1 scoring (happy path, empty, malformed, edge case)
-- [ ] Canvas grade passback (`api/canvas.py`)
-- [ ] Deploy to Cloud Run, smoke-test with one fake submission end-to-end
+- [x] Initialize repo: `pyproject.toml`, `requirements.txt`, `.gitignore`, `Dockerfile`
+- [x] FastAPI skeleton (`api/main.py`) with `/health` and `/submit` endpoints (note: `/healthz` is intercepted by Cloud Run edge, see troubleshooting in README)
+- [x] Canvas webhook signature verification (`api/auth.py`)
+- [x] Cloud Tasks integration: `/submit` enqueues, evaluator pulls
+- [x] Firestore client setup (`leaderboard/firestore_client.py`)
+- [x] Track 1 evaluator (`evaluator/tracks/hallucination.py`): F1 on classification CSV
+- [x] Pytest tests for Track 1 scoring (happy path, empty, malformed, edge case)
+- [x] Canvas grade passback (`api/canvas.py`)
+- [x] Deploy to Cloud Run, smoke-test with one fake submission end-to-end
 
 ### Day 2 — Polish + student-facing materials
-- [ ] Rate-limiting (`api/rate_limit.py`): 5 submissions/student/day via Firestore counter
-- [ ] Error handling: friendly messages for malformed submissions
-- [ ] Logging: structured JSON logs to Cloud Logging
-- [ ] Student starter Colab notebook for Track 1 (`docs/student_starter.ipynb`)
-- [ ] Public rubric doc (`docs/judge_rubrics.md`) with Track 1 scoring explained
+- [x] Rate-limiting (`api/rate_limit.py`): 5 submissions/student/day via Firestore counter
+- [x] Error handling: friendly messages for malformed submissions
+- [x] Logging: structured JSON logs to Cloud Logging
+- [x] Student starter Colab notebook for Track 1 (`docs/student_starter.ipynb`)
+- [x] Public rubric doc (`docs/judge_rubrics.md`) with Track 1 scoring explained
 
 ### Day 3 — Track 2 (Prompt Golf) with judge layer
 - [x] `evaluator/judge.py`: Claude API wrapper, T=0, retries, token logging
@@ -233,18 +233,19 @@ Every track uses this envelope. The `track_payload` differs per track but the wr
 - [x] Tests for Track 3 with small mock corpus
 - [x] Cross-family re-grade pass (`evaluator/regrade.py`) for top 10%
 
-### Day 5 — Firebase-hosted leaderboard
-- [ ] `leaderboard/web/index.html` + `leaderboard.js` — Firestore JS SDK with real-time listener
-- [ ] Style: clean table, sortable columns, per-track view
-- [ ] `firebase.json` config; deploy via `firebase deploy --only hosting`
-- [ ] Verify real-time updates: submitting a test entry rerenders within 1 second
+### Day 5 — Leaderboard surfaces (in-app + Firebase)
+- [x] In-app HTML leaderboard tab on each per-track competition page (auto-refreshes every 10s by polling `/leaderboard/{track_id}` JSON). Keeps the platform usable without Firebase Hosting deploy.
+- [x] `leaderboard/web/index.html` + `leaderboard.js` — Firestore JS SDK with real-time listener (kept as Phase-2 path; needs `firebase init` + web-app registration to fill in `apiKey` / `appId`).
+- [x] Style: clean table, sortable columns, per-track view
+- [x] `firebase.json` config
+- [ ] `firebase deploy --only hosting` — interactive auth required; deferred until v1 launch.
 
 ### Day 6 — Documentation + Track 4 (meta-judge)
-- [ ] Track 4 evaluator (`evaluator/tracks/meta_judge.py`): Cohen's kappa
-- [ ] Instructor gold-rating fixture for kappa computation
-- [ ] Update student starter notebook with all four tracks
-- [ ] FAQ doc (`docs/faq.md`): "why did I get this score?" common cases
-- [ ] README with one-paragraph summary + run instructions
+- [x] Track 4 evaluator (`evaluator/tracks/meta_judge.py`): Cohen's kappa
+- [x] Instructor gold-rating fixture for kappa computation (`corpora/gold/meta_judge.json`)
+- [ ] Update student starter notebook with all four tracks (notebook is currently Track 1 only — extend in a follow-up commit)
+- [x] FAQ doc (`docs/faq.md`): "why did I get this score?" common cases
+- [x] README with one-paragraph summary + run instructions
 
 ### Day 7 — Dry run + buffer
 - [ ] Recruit 2–3 DS Club students to submit fake entries to each track
@@ -252,6 +253,16 @@ Every track uses this envelope. The `track_payload` differs per track but the wr
 - [ ] Add monitoring dashboard in Cloud Logging
 - [x] Set GCP budget alert at $200 to catch runaway usage early (`scripts/budget_alert.ps1`)
 - [x] Cost guardrail: per-student daily token budget enforced in `evaluator/token_budget.py` (`BudgetedJudge` wraps the configured judge per submission; default 50,000 tokens/day; configurable via `DAILY_TOKEN_BUDGET`).
+
+### Day 8 — Kaggle-style UX redesign (added 2026-05-04)
+**Goal:** Make the public surface feel familiar to anyone who has used Kaggle, so D4 students don't have to learn a new mental model.
+
+- [x] Per-track competition shell (`api/competition.py`) at `GET /competitions/{track_id}` with horizontal tabs (Overview / Data / Code / Leaderboard / Rules), persistent submit button top-right, evaluation metric pinned in the header.
+- [x] Card-grid landing (`api/landing.py`) replacing the flat table at `GET /` — one card per competition with live submission/student counts and "top student" headline.
+- [x] In-browser submit modal: paste JSON, drag-drop `.json`, or "Use sample as starting point". Posts via `fetch('/submit')` and shows the response inline. Students never leave the page.
+- [x] Server-rendered leaderboard tab + 10s JS auto-refresh against the existing `/leaderboard/{track_id}` JSON.
+- [x] Single source of truth for per-track metadata (`api/competition_data.py`) shared by the landing, the competition shell, and (eventually) the Get Started page.
+- [x] 29 new tests in `tests/test_competition_page.py` (175 total).
 
 ---
 
