@@ -225,3 +225,49 @@ def test_leaderboard_json_endpoint_remains_unchanged(client: TestClient) -> None
     body = response.json()
     assert body["track_id"] == "hallucination_hunter"
     assert isinstance(body["entries"], list)
+
+
+# ---------- Per-student filter + sortable columns ----------
+
+def test_leaderboard_renders_show_my_submissions_toggle(client: TestClient) -> None:
+    """Each track page must carry the filter toggle so logged-in students can scope the view."""
+    body = client.get("/competitions/hallucination_hunter").text
+    assert 'id="filter-mine"' in body
+    assert "Show only my submissions" in body
+    # The disabled-until-set-up-id pattern: the toggle must start disabled in
+    # the server-rendered HTML so a fresh visitor doesn't toggle a no-op.
+    assert "disabled" in body and "filter-mine" in body
+
+
+def test_leaderboard_renders_sortable_headers(client: TestClient) -> None:
+    body = client.get("/competitions/prompt_golf").text
+    # Three columns must be marked sortable in the server-rendered table.
+    for key in ("rank", "student_id", "final_score", "scored_at"):
+        assert f'data-sort="{key}"' in body, f"missing sortable column: {key}"
+    # The default sort is final_score desc — only that header should start
+    # active and carry the down-arrow indicator.
+    assert 'class="sortable active" data-sort="final_score"' in body
+    assert "&#9660;" in body or "▼" in body
+
+
+def test_leaderboard_renders_set_id_button(client: TestClient) -> None:
+    """Students can click 'Set ID' even before submitting, so they can pre-set
+    their student_id before the first submission lands on the leaderboard."""
+    body = client.get("/competitions/meta_judge").text
+    assert 'id="set-id-btn"' in body
+    assert "Set ID" in body
+
+
+# ---------- Mobile responsiveness ----------
+
+def test_leaderboard_table_wrapped_for_horizontal_scroll(client: TestClient) -> None:
+    """On narrow viewports the leaderboard must scroll horizontally instead of
+    clipping the Submission column. The wrapper div is the load-bearing piece."""
+    body = client.get("/competitions/hallucination_hunter").text
+    assert 'class="lb-scroll"' in body
+
+
+def test_competition_page_has_mobile_breakpoint(client: TestClient) -> None:
+    """Phones (<=600px) must get the tightened padding / font sizes."""
+    body = client.get("/competitions/prompt_golf").text
+    assert "@media (max-width: 600px)" in body

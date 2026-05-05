@@ -225,7 +225,23 @@ table.leaderboard th {
   background: #11161f; color: #a8b1bf; font-weight: 600; font-size: 12px;
   text-transform: uppercase; letter-spacing: 0.5px;
 }
+table.leaderboard th.sortable {
+  cursor: pointer; user-select: none; position: relative;
+}
+table.leaderboard th.sortable:hover { color: #f5f5f7; background: #14202f; }
+table.leaderboard th.sortable .sort-indicator {
+  margin-left: 4px; opacity: 0.4; font-size: 10px;
+}
+table.leaderboard th.sortable.active { color: #f5f5f7; }
+table.leaderboard th.sortable.active .sort-indicator { opacity: 1; color: var(--accent, #ffc107); }
 table.leaderboard tr:last-child td { border-bottom: none; }
+table.leaderboard tr.is-you {
+  background: rgba(44, 128, 255, 0.10);
+  outline: 1px solid #2c80ff;
+}
+table.leaderboard tr.is-you .student::before {
+  content: "👤 "; opacity: 0.7;
+}
 table.leaderboard .rank { color: #a8b1bf; font-family: ui-monospace, Menlo, Consolas, monospace; }
 table.leaderboard .top-1 .rank { color: #ffd700; font-weight: 700; }
 table.leaderboard .top-2 .rank { color: #c0c0c0; font-weight: 700; }
@@ -238,12 +254,38 @@ table.leaderboard .score {
 table.leaderboard .empty { color: #6d7787; text-align: center; padding: 32px; font-style: italic; }
 .leaderboard-meta {
   display: flex; justify-content: space-between; align-items: center;
-  margin: 0 0 12px 0;
+  margin: 0 0 12px 0; flex-wrap: wrap; gap: 12px;
 }
 .leaderboard-meta .refresh-status { color: #a8b1bf; font-size: 12px; }
 .leaderboard-meta .refresh-status.live::before {
   content: "● "; color: #4ade80;
 }
+.lb-controls {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #11161f; border: 1px solid #232c3d; border-radius: 8px;
+  padding: 10px 14px; margin: 0 0 12px 0; gap: 12px; flex-wrap: wrap;
+  font-size: 13px;
+}
+.lb-controls .you-line { color: #c9d1de; }
+.lb-controls .you-line .you-id {
+  color: #2c80ff; font-weight: 600;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+.lb-controls .you-line .you-empty { color: #6d7787; font-style: italic; }
+.lb-controls button.btn-tiny {
+  background: transparent; color: #75c2ff; border: 1px solid #2a3447;
+  padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer;
+  margin-left: 6px;
+}
+.lb-controls button.btn-tiny:hover { color: #a4d6ff; border-color: #4a5568; }
+.lb-controls .filter-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: #c9d1de; cursor: pointer; user-select: none;
+}
+.lb-controls .filter-toggle input[disabled] + span {
+  color: #6d7787; cursor: not-allowed;
+}
+.lb-controls .filter-toggle input { cursor: pointer; }
 
 /* ---------- Submit modal ---------- */
 .modal-backdrop {
@@ -308,6 +350,55 @@ textarea.json-input {
 footer.page-footer {
   max-width: 1200px; margin: 0 auto; padding: 32px 24px;
   color: #6d7787; font-size: 12px; text-align: center; border-top: 1px solid #1d2434;
+}
+
+/* Wrap the leaderboard so it scrolls horizontally on narrow screens
+   instead of clipping the Submission column. */
+.lb-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.lb-scroll table.leaderboard { min-width: 560px; }
+
+/* ---------- Mobile tweaks ----------
+   Targets phones (≤600px). Tightens padding, reduces the giant heading,
+   stacks the header content cleanly, and lets the tab strip scroll
+   instead of wrapping. */
+@media (max-width: 600px) {
+  .topbar { padding: 0 14px; gap: 14px; }
+  .topbar .topbar-nav { gap: 14px; }
+
+  .comp-header { padding: 18px 14px 0; }
+  .comp-header-inner { gap: 12px; }
+  .comp-meta h1 { font-size: 24px; letter-spacing: -0.2px; }
+  .comp-meta .tagline { font-size: 14px; }
+  .btn-submit { padding: 9px 16px; font-size: 13px; }
+  .pill { font-size: 11px; padding: 3px 9px; }
+
+  /* Tab strip: smaller hitboxes, but still scrollable if anything
+     overflows. */
+  .tab-nav { margin-top: 16px; padding-bottom: 0; }
+  .tab-link { padding: 10px 12px; font-size: 13px; }
+
+  main { padding: 20px 14px 48px; }
+  .section-card { padding: 16px 18px; }
+  .section-card h2 { font-size: 16px; }
+
+  .sixty-sec { padding: 18px 18px; }
+  .sixty-sec h2 { font-size: 18px; }
+
+  /* Code-tab headers shrink so all three labels (PowerShell / bash + curl
+     / Python) fit without wrapping. */
+  .code-tab { padding: 7px 10px; font-size: 12px; }
+
+  /* Modal: full-width on phone, bottom-aligned footer stays sticky-ish. */
+  .modal-card { width: 96vw; max-height: 92vh; }
+  .modal-card header { padding: 14px 16px; }
+  .modal-card .body { padding: 14px 16px; }
+  .modal-card footer { padding: 12px 16px; }
+
+  /* Leaderboard tweaks: stack the controls and tighten the cells. */
+  .leaderboard-meta { font-size: 13px; }
+  .lb-controls { padding: 8px 12px; gap: 8px; }
+  .lb-controls .you-line { font-size: 12.5px; }
+  table.leaderboard th, table.leaderboard td { padding: 9px 10px; font-size: 13px; }
 }
 """
 
@@ -505,24 +596,36 @@ def _leaderboard_panel(t: TrackMeta, rows: list[dict[str, Any]]) -> str:
   <div class="leaderboard-meta">
     <div>
       <strong>Best score per student</strong> &middot;
-      sorted descending &middot; <span id="lb-count">{len(rows)}</span> entries
+      <span id="lb-count">{len(rows)}</span> entries
     </div>
     <div class="refresh-status live" id="lb-status">Live &middot; refreshing every 10s</div>
   </div>
-  <table class="leaderboard">
-    <thead>
-      <tr>
-        <th>Rank</th>
-        <th>Student</th>
-        <th>Score</th>
-        <th>Submission</th>
-        <th>Updated</th>
-      </tr>
-    </thead>
-    <tbody id="lb-rows">
-      {body}
-    </tbody>
-  </table>
+  <div class="lb-controls">
+    <div class="you-line">
+      <span id="you-line-text" class="you-empty">You aren't signed in &mdash; submit once and we'll remember your <code>student_id</code>.</span>
+      <button class="btn-tiny" id="set-id-btn" type="button">Set ID</button>
+    </div>
+    <label class="filter-toggle">
+      <input type="checkbox" id="filter-mine" disabled>
+      <span>Show only my submissions</span>
+    </label>
+  </div>
+  <div class="lb-scroll">
+    <table class="leaderboard">
+      <thead>
+        <tr>
+          <th class="sortable" data-sort="rank">Rank<span class="sort-indicator"></span></th>
+          <th class="sortable" data-sort="student_id">Student<span class="sort-indicator"></span></th>
+          <th class="sortable active" data-sort="final_score" data-default-dir="desc">Score<span class="sort-indicator">▼</span></th>
+          <th>Submission</th>
+          <th class="sortable" data-sort="scored_at">Updated<span class="sort-indicator"></span></th>
+        </tr>
+      </thead>
+      <tbody id="lb-rows">
+        {body}
+      </tbody>
+    </table>
+  </div>
   <p style="color:#6d7787; font-size:12px; margin-top:12px;">
     Raw JSON: <a href="/leaderboard/{t.id}"><code>/leaderboard/{t.id}</code></a>
   </p>
@@ -834,6 +937,9 @@ def _page_script(track_id: str) -> str:
       }});
       const data = await r.json().catch(() => ({{ raw: '<non-json response>' }}));
       if (r.ok) {{
+        // Remember the student_id we just submitted under so future page loads
+        // can show the "you are X" indicator and enable the filter toggle.
+        if (body && body.student_id) setMyStudentId(body.student_id);
         showResult('ok',
           'Submitted!\\n\\n' + JSON.stringify(data, null, 2)
           + '\\n\\nThe worker scores asynchronously — see the Leaderboard tab in a few seconds.');
@@ -855,46 +961,181 @@ def _page_script(track_id: str) -> str:
     resultEl.textContent = msg;
   }}
 
-  // ---------- Leaderboard refresh ----------
+  // ---------- Student-ID memory ("you are X") ----------
+  const STUDENT_ID_KEY = 'arena_student_id';
+  function getMyStudentId() {{
+    try {{ return localStorage.getItem(STUDENT_ID_KEY) || ''; }}
+    catch (e) {{ return ''; }}
+  }}
+  function setMyStudentId(id) {{
+    try {{ localStorage.setItem(STUDENT_ID_KEY, id); }}
+    catch (e) {{ /* no-op */ }}
+    renderYouLine();
+    rerenderLeaderboard();
+  }}
+  function renderYouLine() {{
+    const el = document.getElementById('you-line-text');
+    const filterCb = document.getElementById('filter-mine');
+    const myId = getMyStudentId();
+    if (!el) return;
+    if (myId) {{
+      el.innerHTML = 'You are <span class="you-id">' + esc(myId) + '</span>';
+      el.className = '';
+      if (filterCb) filterCb.disabled = false;
+    }} else {{
+      el.innerHTML = "You aren't signed in &mdash; submit once and we'll remember your <code>student_id</code>.";
+      el.className = 'you-empty';
+      if (filterCb) {{
+        filterCb.disabled = true;
+        filterCb.checked = false;
+      }}
+    }}
+  }}
+  document.getElementById('set-id-btn').addEventListener('click', () => {{
+    const current = getMyStudentId();
+    const next = window.prompt(
+      "What's your student_id (Canvas / NetID)?",
+      current
+    );
+    if (next === null) return;
+    const trimmed = next.trim();
+    if (!trimmed) {{
+      try {{ localStorage.removeItem(STUDENT_ID_KEY); }} catch (e) {{}}
+      renderYouLine();
+      rerenderLeaderboard();
+    }} else {{
+      setMyStudentId(trimmed);
+    }}
+  }});
+  renderYouLine();
+
+  // ---------- Leaderboard state, sort, filter ----------
+  // We keep the latest fetched rows in memory so toggling the filter or
+  // re-sorting doesn't require a network round-trip, and the live refresh
+  // doesn't fight with the user's interaction.
+  let lbRows  = [];      // last-known rows from /leaderboard/{{track}}
+  let lbSort  = {{ key: 'final_score', dir: 'desc' }};
+
+  function compareByKey(a, b, key) {{
+    const av = a[key];
+    const bv = b[key];
+    if (key === 'final_score') return (Number(av) || 0) - (Number(bv) || 0);
+    if (key === 'rank') return (a._rank || 0) - (b._rank || 0);
+    return String(av || '').localeCompare(String(bv || ''));
+  }}
+  function sortRows(rows) {{
+    const sorted = rows.slice();
+    sorted.sort((a, b) => {{
+      const cmp = compareByKey(a, b, lbSort.key);
+      return lbSort.dir === 'asc' ? cmp : -cmp;
+    }});
+    return sorted;
+  }}
+  function rerenderLeaderboard() {{
+    const tbody  = document.getElementById('lb-rows');
+    const count  = document.getElementById('lb-count');
+    const hdrSubs = document.getElementById('hdr-submission-count');
+    const hdrStud = document.getElementById('hdr-student-count');
+    const filterCb = document.getElementById('filter-mine');
+    const myId   = getMyStudentId();
+    const filterMine = filterCb && filterCb.checked && myId;
+
+    // Header counts always reflect the unfiltered total.
+    if (hdrSubs) hdrSubs.textContent = lbRows.length + ' submission' + (lbRows.length === 1 ? '' : 's');
+    if (hdrStud) {{
+      const students = new Set(lbRows.map(x => x.student_id)).size;
+      hdrStud.textContent = students + ' student' + (students === 1 ? '' : 's');
+    }}
+
+    // Compute global rank (against the overall best-score-desc order) before
+    // filtering, so a filtered student still sees "I'm #15 out of N".
+    const ranked = lbRows.slice().sort((a, b) => (Number(b.final_score) || 0) - (Number(a.final_score) || 0));
+    const rankByStudent = new Map();
+    ranked.forEach((r, i) => rankByStudent.set(r.student_id, i + 1));
+
+    let visible = lbRows.slice();
+    if (filterMine) visible = visible.filter(r => r.student_id === myId);
+    visible.forEach(r => {{ r._rank = rankByStudent.get(r.student_id) || 0; }});
+    visible = sortRows(visible);
+
+    if (count) count.textContent = String(visible.length);
+
+    if (!tbody) return;
+    if (!visible.length) {{
+      const msg = filterMine
+        ? 'No submissions yet under <code>' + esc(myId) + '</code>. Hit Submit Entry to make your first.'
+        : 'No submissions yet for this track. Be the first!';
+      tbody.innerHTML = '<tr><td colspan="5" class="empty">' + msg + '</td></tr>';
+      return;
+    }}
+
+    tbody.innerHTML = visible.map(row => {{
+      const r = row._rank || 0;
+      const cls = [];
+      if (r === 1) cls.push('top-1');
+      else if (r === 2) cls.push('top-2');
+      else if (r === 3) cls.push('top-3');
+      if (myId && row.student_id === myId) cls.push('is-you');
+      const score = (Number(row.final_score) || 0).toFixed(4);
+      return `<tr class="${{cls.join(' ')}}">`
+        + `<td class="rank">#${{r}}</td>`
+        + `<td class="student">${{esc(row.student_id)}}</td>`
+        + `<td class="score">${{score}}</td>`
+        + `<td><code>${{esc(row.submission_id)}}</code></td>`
+        + `<td>${{esc(row.scored_at || '')}}</td>`
+        + '</tr>';
+    }}).join('');
+  }}
+
+  // Sortable column headers — click to toggle direction; click another header
+  // to switch sort key (with default direction).
+  document.querySelectorAll('th.sortable').forEach(th => {{
+    th.addEventListener('click', () => {{
+      const key = th.dataset.sort;
+      const defaultDir = th.dataset.defaultDir || 'asc';
+      if (lbSort.key === key) {{
+        lbSort.dir = lbSort.dir === 'asc' ? 'desc' : 'asc';
+      }} else {{
+        lbSort.key = key;
+        lbSort.dir = defaultDir;
+      }}
+      // Update the visual indicators across all sortable headers.
+      document.querySelectorAll('th.sortable').forEach(other => {{
+        const ind = other.querySelector('.sort-indicator');
+        if (other === th) {{
+          other.classList.add('active');
+          if (ind) ind.textContent = lbSort.dir === 'asc' ? '▲' : '▼';
+        }} else {{
+          other.classList.remove('active');
+          if (ind) ind.textContent = '';
+        }}
+      }});
+      rerenderLeaderboard();
+    }});
+  }});
+
+  // Filter toggle.
+  document.getElementById('filter-mine').addEventListener('change', rerenderLeaderboard);
+
   async function refreshLeaderboard() {{
     try {{
       const r = await fetch('/leaderboard/' + TRACK_ID + '?limit=100');
       if (!r.ok) return;
       const data = await r.json();
-      const rows = data.entries || [];
-      const tbody = document.getElementById('lb-rows');
-      const count = document.getElementById('lb-count');
-      const hdrSubs = document.getElementById('hdr-submission-count');
-      const hdrStud = document.getElementById('hdr-student-count');
-      if (count) count.textContent = String(rows.length);
-      if (hdrSubs) hdrSubs.textContent = rows.length + ' submission' + (rows.length === 1 ? '' : 's');
-      if (hdrStud) {{
-        const students = new Set(rows.map(x => x.student_id)).size;
-        hdrStud.textContent = students + ' student' + (students === 1 ? '' : 's');
-      }}
-      if (!tbody) return;
-      if (!rows.length) {{
-        tbody.innerHTML = '<tr><td colspan="5" class="empty">No submissions yet for this track. Be the first!</td></tr>';
-      }} else {{
-        tbody.innerHTML = rows.map((row, i) => {{
-          const cls = i === 0 ? 'top-1' : i === 1 ? 'top-2' : i === 2 ? 'top-3' : '';
-          const rank = i + 1;
-          const score = (Number(row.final_score) || 0).toFixed(4);
-          return `<tr class="${{cls}}">`
-            + `<td class="rank">#${{rank}}</td>`
-            + `<td class="student">${{esc(row.student_id)}}</td>`
-            + `<td class="score">${{score}}</td>`
-            + `<td><code>${{esc(row.submission_id)}}</code></td>`
-            + `<td>${{esc(row.scored_at || '')}}</td>`
-            + '</tr>';
-        }}).join('');
-      }}
+      lbRows = data.entries || [];
+      rerenderLeaderboard();
     }} catch (e) {{ /* swallow — best-effort refresh */ }}
   }}
+
   function esc(s) {{
     return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
       ({{ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }})[c]);
   }}
+
+  // Initial pull populates lbRows from the JSON endpoint so subsequent
+  // sort/filter actions have data to work with even before the first
+  // 10-second tick fires.
+  refreshLeaderboard();
   setInterval(refreshLeaderboard, 10000);
 }})();
 </script>
