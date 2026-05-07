@@ -23,12 +23,26 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi import Body, Depends, FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 
+from api.admin import (
+    render_admin_html,
+    require_admin,
+    save_config as admin_save_config,
+    serialize_current as admin_serialize_current,
+    test_connection as admin_test_connection,
+)
+from api.admin_config import (
+    AdminStore,
+    FirestoreAdminStore,
+    InMemoryAdminStore,
+    get_active_judge_config,
+)
 from api.canvas import CanvasClient
 from api.competition import render_competition_html
 from api.competition_data import TRACKS_META, get_track
@@ -44,6 +58,7 @@ from api.rate_limit import (
 )
 from api.schemas import Submission
 from evaluator.gold import GoldProvider
+from evaluator.providers import get_provider
 from evaluator.runner import EvaluationDeps, run_evaluation
 from api.get_started import render_get_started_html
 from api.sample_payloads import SAMPLE_PAYLOADS
@@ -68,9 +83,40 @@ class AppState:
     leaderboard: LeaderboardStore
     rate_limiter: RateLimiter
     eval_deps: EvaluationDeps
+    admin_store: AdminStore
 
 
-def _build_eval_deps(settings: Settings, leaderboard: LeaderboardStore) -> EvaluationDeps:
+def _build_judge_factory(admin_store: AdminStore) -> "Callable[[], JudgeBackend | None]":
+    """Return a callable the runner uses to get a fresh judge per submission.
+
+    Resolution order on each call:
+      1. Admin-managed config in `admin_store` (Firestore + Secret Manager)
+         — this is the v2 path. Cache hit is the common case.
+      2. `ANTHROPIC_API_KEY` env var → AnthropicJudge — back-compat for
+         services deployed before the admin page existed.
+      3. None — Tracks 2/3 will record a `judge_unavailable` error.
+    """
+    def factory() -> JudgeBackend | None:
+        cfg = get_active_judge_config(admin_store)
+        if cfg is not None and cfg.api_key:
+            try:
+                return get_provider(cfg.provider).make_judge(cfg.api_key, cfg.model)
+            except Exception as exc:
+                logging.getLogger(__name__).warning(
+                    "admin_judge_factory_failed: %s — falling back to env var",
+                    exc,
+                )
+        if os.environ.get("ANTHROPIC_API_KEY"):
+            return AnthropicJudge()
+        return None
+    return factory
+
+
+def _build_eval_deps(
+    settings: Settings,
+    leaderboard: LeaderboardStore,
+    admin_store: AdminStore,
+) -> EvaluationDeps:
     canvas: CanvasClient | None = None
     if settings.canvas_api_token or settings.local_dev:
         canvas = CanvasClient(
@@ -78,13 +124,6 @@ def _build_eval_deps(settings: Settings, leaderboard: LeaderboardStore) -> Evalu
             api_token=settings.canvas_api_token,
             dry_run=settings.local_dev or not settings.canvas_api_token,
         )
-
-    # Judge: lazy AnthropicJudge in production; None in local-dev unless the
-    # ANTHROPIC_API_KEY env var is set (in which case real calls flow). Tests
-    # inject a FakeJudge directly and bypass this path.
-    judge: JudgeBackend | None = None
-    if os.environ.get("ANTHROPIC_API_KEY"):
-        judge = AnthropicJudge()
 
     # Token budget: per-student daily cap on judge-token spend. Same backend
     # split as the rate limiter — Firestore in prod, in-memory in dev/tests.
@@ -101,7 +140,8 @@ def _build_eval_deps(settings: Settings, leaderboard: LeaderboardStore) -> Evalu
         gold_provider=GoldProvider(default_gold_dir),
         canvas=canvas,
         canvas_context_resolver=None,  # wired in Day 2 with the Canvas webhook
-        judge=judge,
+        judge=None,
+        judge_factory=_build_judge_factory(admin_store),
         token_budget=token_budget,
     )
 
@@ -151,13 +191,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         InMemoryRateLimiter(limit=settings.rate_limit_per_day) if settings.local_dev
         else FirestoreRateLimiter(settings.project_id, limit=settings.rate_limit_per_day)
     )
-    eval_deps = _build_eval_deps(settings, leaderboard)
+    admin_store: AdminStore = (
+        InMemoryAdminStore() if settings.local_dev
+        else FirestoreAdminStore(settings.project_id)
+    )
+    eval_deps = _build_eval_deps(settings, leaderboard, admin_store)
     queue = _build_queue(settings, eval_deps)
 
     state = AppState()
     state.settings = settings
     state.queue = queue
     state.leaderboard = leaderboard
+    state.admin_store = admin_store
     state.rate_limiter = rate_limiter
     state.eval_deps = eval_deps
     app.state.arena = state
@@ -218,6 +263,49 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # so the worked examples can never drift from the JSON served by
         # /samples/{track_id}.
         return render_get_started_html()
+
+    # ---------- Admin routes ----------
+
+    @app.get("/admin", response_class=HTMLResponse)
+    def admin_page() -> str:
+        # The HTML is served unconditionally; the page itself prompts for
+        # the admin token and gates every API call client-side via the
+        # X-Admin-Token header. The /admin/* JSON endpoints enforce auth.
+        return render_admin_html()
+
+    @app.get("/admin/current")
+    def admin_current(request: Request, st: AppState = Depends(_state)) -> dict:
+        require_admin(request)
+        return admin_serialize_current(st.admin_store)
+
+    @app.post("/admin/test")
+    def admin_test(
+        request: Request,
+        body: dict[str, Any] = Body(...),
+    ) -> dict:
+        require_admin(request)
+        provider = str(body.get("provider", "")).strip()
+        api_key = str(body.get("api_key", "")).strip()
+        return admin_test_connection(provider=provider, api_key=api_key)
+
+    @app.post("/admin/save")
+    def admin_save(
+        request: Request,
+        body: dict[str, Any] = Body(...),
+        st: AppState = Depends(_state),
+    ) -> dict:
+        require_admin(request)
+        provider = str(body.get("provider", "")).strip()
+        model = str(body.get("model", "")).strip()
+        api_key = str(body.get("api_key", "")).strip()
+        # Track who rotated the key. The admin token is a shared secret in
+        # v1, so "admin" is the only useful value here. Future iterations
+        # could swap in OIDC and capture the actual user.
+        return admin_save_config(
+            st.admin_store,
+            provider=provider, model=model, api_key=api_key,
+            updated_by="admin",
+        )
 
     @app.get("/samples/{track_id}")
     def sample_payload(track_id: str) -> dict:

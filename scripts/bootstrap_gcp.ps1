@@ -117,15 +117,62 @@ function Ensure-Secret($name) {
 }
 Ensure-Secret "canvas-api-token"
 Ensure-Secret "canvas-webhook-secret"
+Ensure-Secret "anthropic-api-key"
+# admin-token gates the /admin page. judge-api-key is written by the admin
+# page itself when an admin saves a new provider config — we just need the
+# secret container to exist with read permission for the runtime SA.
+Ensure-Secret "admin-token"
+Ensure-Secret "judge-api-key"
+
+# admin-token must have at least one version before deploy can mount it,
+# and the value should be unguessable. Auto-generate a 64-char token on
+# first run and print it once — admins log in to /admin with this value.
+$adminVersions = gcloud secrets versions list admin-token `
+    --project=$ProjectId --filter="state=ENABLED" --format="value(name)" 2>$null
+if (-not $adminVersions) {
+    $generated = ((New-Guid).ToString() + (New-Guid).ToString()) -replace '-', ''
+    Write-Host ""
+    Write-Host "==> Generating admin-token (save this — required to sign into /admin):"
+    Write-Host "      $generated"
+    Write-Host ""
+    $generated | gcloud secrets versions add admin-token `
+        --project=$ProjectId --data-file=- | Out-Null
+} else {
+    Write-Host "==> admin-token already has a version — leaving it alone."
+    Write-Host "    Read it with: gcloud secrets versions access latest --secret=admin-token --project=$ProjectId"
+}
+
+# The runtime SA needs roles/secretmanager.secretVersionAdder on
+# judge-api-key so the admin page can write new versions to it. The
+# project-wide secretAccessor binding above only grants read.
+Write-Host "==> Granting runtime SA permission to write new judge-api-key versions"
+gcloud secrets add-iam-policy-binding judge-api-key `
+    --project=$ProjectId `
+    --member="serviceAccount:$RuntimeEmail" `
+    --role="roles/secretmanager.secretVersionAdder" `
+    --quiet 2>$null | Out-Null
+
+# Also grant the runtime SA the secretAdmin role on the *secret* level so
+# it can create the secret if missing (auto-create path in admin_config.py).
+gcloud secrets add-iam-policy-binding judge-api-key `
+    --project=$ProjectId `
+    --member="serviceAccount:$RuntimeEmail" `
+    --role="roles/secretmanager.admin" `
+    --quiet 2>$null | Out-Null
 
 Write-Host ""
 Write-Host "==> Bootstrap complete."
 Write-Host ""
 Write-Host "Next steps:"
-Write-Host "  1. Populate secrets:"
+Write-Host "  1. Set the admin token (any random string >= 32 chars):"
+Write-Host "     `"$(New-Guid)$(New-Guid)`" | gcloud secrets versions add admin-token --project=$ProjectId --data-file=-"
+Write-Host "  2. Populate the Canvas secrets (placeholders OK during build-out):"
 Write-Host "     gcloud secrets versions add canvas-api-token --data-file=path-to-token.txt"
 Write-Host "     gcloud secrets versions add canvas-webhook-secret --data-file=path-to-secret.txt"
-Write-Host "  2. Deploy:  pwsh ./scripts/deploy.ps1"
+Write-Host "  3. Deploy:  pwsh ./scripts/deploy.ps1"
+Write-Host "  4. Open /admin on the deployed service, sign in with the admin"
+Write-Host "     token, pick a provider (Gemini Flash is recommended for the free tier),"
+Write-Host "     test the connection, and save. Tracks 2 & 3 light up immediately."
 Write-Host ""
 Write-Host "Runtime SA: $RuntimeEmail"
 Write-Host "Invoker SA: $InvokerEmail"

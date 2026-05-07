@@ -33,7 +33,7 @@ gcloud run deploy $ServiceName `
   --service-account $RuntimeSA `
   --allow-unauthenticated `
   --set-env-vars "GCP_PROJECT_ID=$ProjectId,GCP_REGION=$Region,TASKS_QUEUE_ID=$QueueId,TASKS_INVOKER_SA=$InvokerSA,ARENA_LOCAL_DEV=0" `
-  --set-secrets "CANVAS_API_TOKEN=canvas-api-token:latest,CANVAS_WEBHOOK_SECRET=canvas-webhook-secret:latest,ANTHROPIC_API_KEY=anthropic-api-key:latest" `
+  --set-secrets "CANVAS_API_TOKEN=canvas-api-token:latest,CANVAS_WEBHOOK_SECRET=canvas-webhook-secret:latest,ANTHROPIC_API_KEY=anthropic-api-key:latest,ADMIN_TOKEN=admin-token:latest" `
   --quiet
 
 $ServiceUrl = gcloud run services describe $ServiceName --region $Region --project $ProjectId --format="value(status.url)"

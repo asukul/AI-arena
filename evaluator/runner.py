@@ -58,12 +58,19 @@ class EvaluationDeps:
     """Bundle of collaborators the evaluator needs at runtime.
 
     Built once at app startup (real GCP clients) or per-test (in-memory subs).
+
+    `judge_factory` is consulted per submission so the admin page can rotate
+    the active judge without restarting the service. If set, it takes
+    precedence over the static `judge` field. Tests that want deterministic
+    judge behavior should pass `judge=FakeJudge(...)` and leave
+    `judge_factory=None`.
     """
     leaderboard: Any
     gold_provider: Any
     canvas: Any | None = None
     canvas_context_resolver: Callable[[Submission], dict[str, int] | None] | None = None
     judge: JudgeBackend | None = None
+    judge_factory: Callable[[], JudgeBackend | None] | None = None
     token_budget: TokenBudgetStore | None = None
     extras: dict[str, Any] = field(default_factory=dict)
 
@@ -84,14 +91,26 @@ def run_evaluation(submission: Submission, deps: EvaluationDeps) -> ScoreResult:
         deps.leaderboard.write_result(result)
         return result
 
+    # Resolve the active judge:
+    #   1. If a judge_factory is configured (admin-managed config in
+    #      production), call it for a fresh judge per submission. This is
+    #      what lets the admin page rotate provider/model without a redeploy.
+    #   2. Fall back to the static `deps.judge` (env-var Anthropic in v1
+    #      back-compat, or a FakeJudge in tests).
+    base_judge: JudgeBackend | None = None
+    if deps.judge_factory is not None:
+        base_judge = deps.judge_factory()
+    if base_judge is None:
+        base_judge = deps.judge
+
     # If a token budget is configured, wrap the judge so calls during this
     # submission are accounted to the submitter's student_id and rejected
     # once the daily limit is reached. Submissions for tracks with no LLM
     # call (Track 1, Track 4) will simply never invoke the wrapped judge.
-    judge_for_run: JudgeBackend | None = deps.judge
-    if deps.judge is not None and deps.token_budget is not None:
+    judge_for_run: JudgeBackend | None = base_judge
+    if base_judge is not None and deps.token_budget is not None:
         judge_for_run = BudgetedJudge(
-            inner=deps.judge,
+            inner=base_judge,
             store=deps.token_budget,
             student_id=submission.student_id,
         )
