@@ -17,6 +17,7 @@ dependencies = [
   "structlog>=24.4",
   "google-cloud-tasks>=2.16",
   "google-cloud-firestore>=2.19",
+  "google-cloud-secret-manager>=2.20",
   "anthropic>=0.40",
 ]
 
