@@ -286,3 +286,49 @@ def test_admin_test_endpoint_redacts_api_key_from_errors(
     assert body["ok"] is False
     assert "AIza-leak-me" not in body["error"]
     assert "<redacted>" in body["error"]
+
+
+# ---------- OpenAI provider parameter routing ----------
+
+@pytest.mark.parametrize("model,expected_new", [
+    ("gpt-4o-mini",     False),
+    ("gpt-4o",          False),
+    ("gpt-4-turbo",     False),
+    ("gpt-3.5-turbo",   False),
+    ("gpt-5",           True),
+    ("gpt-5-mini",      True),
+    ("gpt-5.5",         True),  # the model name from production rev 00024 that 400'd
+    ("o1-preview",      True),
+    ("o3-mini",         True),
+    ("o4-mini",         True),
+])
+def test_openai_provider_routes_max_tokens_param_by_model(
+    model: str, expected_new: bool,
+) -> None:
+    """Newer OpenAI families (GPT-5, o1/o3/o4) require `max_completion_tokens`
+    and reject `temperature`. The provider must detect by model-id prefix
+    so the admin-saved model picks the right parameter shape."""
+    from evaluator.providers.openai_provider import _is_newer_openai_family
+    assert _is_newer_openai_family(model) is expected_new
+
+
+def test_openai_provider_extracts_400_error_message() -> None:
+    """When OpenAI returns a 400 with a structured error body, we surface
+    the `message` (and `param` if present) so the admin sees the actionable
+    reason — not just 'HTTP 400'."""
+    import httpx
+    from evaluator.providers.openai_provider import _extract_openai_error
+
+    body = {"error": {
+        "message": "Unsupported parameter: 'max_tokens'.",
+        "param": "max_tokens",
+        "type": "invalid_request_error",
+    }}
+    response = httpx.Response(
+        status_code=400,
+        json=body,
+        request=httpx.Request("POST", "https://api.openai.com/v1/chat/completions"),
+    )
+    assert _extract_openai_error(response) == (
+        "Unsupported parameter: 'max_tokens'. (param=max_tokens)"
+    )

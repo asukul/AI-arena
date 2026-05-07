@@ -74,6 +74,41 @@ def make_judge(api_key: str, model: str) -> JudgeBackend:
     )
 
 
+# ---------- OpenAI parameter quirks ----------
+
+_NEWER_PREFIXES = ("gpt-5", "o1", "o3", "o4")
+
+
+def _is_newer_openai_family(model: str) -> bool:
+    """OpenAI's reasoning models (o-series) and GPT-5 use new parameter names.
+
+    Heuristic by model-id prefix — picks up `gpt-5`, `gpt-5-mini`, `o1-preview`,
+    `o3-mini`, `o4-mini`, etc. Older models (gpt-4o, gpt-4-turbo, gpt-3.5)
+    stay on the legacy `max_tokens` + `temperature` shape.
+    """
+    m = model.lower()
+    return any(m.startswith(p) for p in _NEWER_PREFIXES)
+
+
+def _extract_openai_error(r: httpx.Response) -> str:
+    """Pull the human-readable error message out of an OpenAI 400 body.
+
+    OpenAI returns `{"error": {"message": "...", "param": "...", "type": "..."}}`.
+    We surface the message + param so the admin sees *why* the model
+    rejected the request (e.g. "Unsupported parameter: 'max_tokens'").
+    """
+    try:
+        body = r.json()
+        err = (body.get("error") or {}) if isinstance(body, dict) else {}
+        msg = err.get("message") or ""
+        param = err.get("param")
+        if param:
+            return f"{msg} (param={param})"
+        return msg or r.text[:300]
+    except Exception:
+        return r.text[:300]
+
+
 class OpenAICompatJudge:
     """OpenAI-compatible chat-completion judge.
 
@@ -111,15 +146,27 @@ class OpenAICompatJudge:
             "Content-Type": "application/json",
             **self._extra_headers,
         }
+
+        # Newer OpenAI families (GPT-5, o1/o3/o4 reasoning models) reject
+        # `max_tokens` and `temperature` — the new names are
+        # `max_completion_tokens`, and reasoning models force their own
+        # temperature. Detect by model-id prefix and emit the right shape.
+        is_new_family = _is_newer_openai_family(chosen_model)
         body: dict[str, Any] = {
             "model": chosen_model,
-            "temperature": 0,
-            "max_tokens": self._max_tokens,
             "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
         }
+        if is_new_family:
+            body["max_completion_tokens"] = self._max_tokens
+            # Reasoning models reject temperature outright; GPT-5 only
+            # accepts temperature=1, so skipping it gets us the default.
+        else:
+            body["max_tokens"] = self._max_tokens
+            body["temperature"] = 0
+
         url = f"{self._base_url}/chat/completions"
 
         attempt = 0
@@ -129,6 +176,15 @@ class OpenAICompatJudge:
             try:
                 with httpx.Client(timeout=_TIMEOUT) as client:
                     r = client.post(url, headers=headers, json=body)
+                if r.status_code == 400:
+                    # Capture the actual reason. OpenAI 4xxs are not
+                    # transient — bail out immediately rather than retry,
+                    # and surface the error body so the operator sees
+                    # *why* (invalid model, unsupported parameter, etc.).
+                    detail = _extract_openai_error(r)
+                    raise RuntimeError(
+                        f"{self._provider_name} 400 Bad Request: {detail}"
+                    )
                 if r.status_code in (429, 500, 502, 503, 504):
                     raise httpx.HTTPStatusError(
                         f"{self._provider_name} transient {r.status_code}",
@@ -137,6 +193,9 @@ class OpenAICompatJudge:
                 r.raise_for_status()
                 data = r.json()
                 break
+            except RuntimeError:
+                # Non-retryable 4xx — fail fast with the actionable reason.
+                raise
             except httpx.HTTPError as exc:
                 last_exc = exc
                 attempt += 1
